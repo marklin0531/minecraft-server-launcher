@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>minecraft伺服器 - 新增</title>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';"/>
+    <link href="./css/bootstrap-v5.min.css" rel="stylesheet">
+    <script src="./css/bootstrap.bundle.min.js"></script>
+    <style>
+        body {
+            user-select: none;  /*禁止用户用鼠标在页面上选中文字、图片等，也就是，让页面内容不可选。也可以只允许用户选中文字，或者全部都放开*/
+            background-color: white;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+<div style="padding-bottom: 10px;"></div>
+<div class="alert alert-danger" id="notice" style="display: none;"><span>伺服器正在運行中，部份功能將被禁用。</span></div>
+<div class="container pb-2">
+    <div class="col-sm-12">
+        <form class="row1 gg-3 needs-validation " novalidate action="javascript:void(0);" id="frm1">
+
+            <div class="card">
+                <div class="card-header">伺 服 器 設 定</div>
+                <div class="card-body">
+                    <!-- start -->
+
+                    <div class="mb-3">
+                        <label for="motd" class="form-label">* 伺服器介紹 (限輸入英文):</label>
+                        <input type="text" class="form-control" id="motd" value="A Minecraft Server" maxlength="150" required>
+                        <div class="invalid-feedback">
+                            必填
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="version" class="form-label">* 伺服器版本:</label>
+                        <select class="form-select is-valid2" id="version">
+<!--                            <option selected value="1.16.5">1.16.5</option>-->
+<!--                            <option value="1.16.4">1.16.4 - 尚未下載</option>-->
+<!--                            <option value="1.13.2">1.13.2</option>-->
+<!--                            <option value="1.12.2">1.12.2</option>-->
+                        </select>
+                    </div>
+<!--                    <div class="mb-3">-->
+<!--                        <label for="server_port" class="form-label">* 伺服器連接埠:</label>-->
+<!--                        <select class="form-select is-valid2" id="server_port">-->
+<!--                            <option selected value="25565">25565</option>-->
+<!--                            <option value="25566">25566</option>-->
+<!--                            <option value="25567">25567</option>-->
+<!--                        </select>-->
+<!--                    </div>-->
+<!--                    <div class="mb-3">-->
+<!--                        <label for="" class="form-label">* 地圖存放的目錄:</label>-->
+<input type="hidden" id="level_name" value="world">
+<!--                        <select class="form-select is-valid2" id="level_name">-->
+<!--                        </select>-->
+<!--                    </div>-->
+                    <div class="mb-3">
+                        <label for="ops" class="form-label">OP管理者:</label>
+                        <input type="text" class="form-control is-invalid2" id="ops" value="jamie0324,roy0111">
+                        <div class="invalid-feedback">
+                        </div>
+                    </div>
+                    <!-- end -->
+                </div>
+            </div>
+
+            <div class="mb-3">
+            </div>
+
+            <div class="card">
+                <div class="card-header">遊 戲 設 定</div>
+                <div class="card-body">
+                    <!-- start -->
+                    <div class="mb-3">
+                        <label for="" class="form-label">* 正版驗證:</label>
+
+                        <input class="form-check-input" type="radio" name="online_mode" id="online_mode_1" value="true" >
+                        <label class="form-check-label" for="online_mode_1">
+                            開啟
+                        </label>
+                        <input class="form-check-input" type="radio" name="online_mode" id="online_mode_2" value="false" checked>
+                        <label class="form-check-label" for="online_mode_2">
+                            關閉
+                        </label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="" class="form-label">* 遊戲模式:</label>
+
+                        <input class="form-check-input" type="radio" name="gamemode" id="gamemode_0" value="0" checked>
+                        <label class="form-check-label" for="gamemode_0">
+                            生存 <!--survival-->
+                        </label>
+                        <input class="form-check-input" type="radio" name="gamemode" id="gamemode_1" value="1">
+                        <label class="form-check-label" for="gamemode_1">
+                            創造 <!--creative-->
+                        </label>
+                        <input class="form-check-input" type="radio" name="gamemode" id="gamemode_2" value="2">
+                        <label class="form-check-label" for="gamemode_2">
+                            冒險 <!--adventure-->
+                        </label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="" class="form-label">* 地圖模式:</label>
+
+                        <input class="form-check-input" type="radio" name="level_type" id="level_type_1" value="DEFAULT"
+                               checked>
+                        <label class="form-check-label" for="level_type_1">
+                            預設模式
+                        </label>
+                        <input class="form-check-input" type="radio" name="level_type" id="level_type_2" value="FLAT">
+                        <label class="form-check-label" for="level_type_2">
+                            平地模式
+                        </label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="" class="form-label">* 容納遊戲人數:</label>
+
+                        <input class="form-check-input" type="radio" name="max_players" id="max_players_1" value="5" checked>
+                        <label class="form-check-label" for="max_players_1">5</label>
+
+                        <input class="form-check-input" type="radio" name="max_players" id="max_players_2" value="10">
+                        <label class="form-check-label" for="max_players_2">10</label>
+
+                        <input class="form-check-input" type="radio" name="max_players" id="max_players_3" value="15">
+                        <label class="form-check-label" for="max_players_3">15</label>
+
+                        <input class="form-check-input" type="radio" name="max_players" id="max_players_4" value="20">
+                        <label class="form-check-label" for="max_players_4">20</label>
+
+<!--                        <input class="form-check-input" type="radio" name="max_players" id="max_players_3" value="30">-->
+<!--                        <label class="form-check-label" for="max_players_3">30</label>-->
+
+<!--                        <input class="form-check-input" type="radio" name="max_players" id="max_players_4" value="50">-->
+<!--                        <label class="form-check-label" for="max_players_4">50</label>-->
+
+<!--                        <input class="form-check-input" type="radio" name="max_players" id="max_players_5" value="100">-->
+<!--                        <label class="form-check-label" for="max_players_5">100</label>-->
+                    </div>
+                    <div class="mb-3">
+                        <label for="" class="form-label">* 地獄傳送門:</label>
+
+                        <input class="form-check-input" type="radio" name="allow_nether" id="allow_nether_1"
+                               value="true" checked>
+                        <label class="form-check-label" for="allow_nether_1">
+                            開啟
+                        </label>
+                        <input class="form-check-input" type="radio" name="allow_nether" id="allow_nether_2"
+                               value="false">
+                        <label class="form-check-label" for="allow_nether_2">
+                            關閉
+                        </label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="" class="form-label">* PVP:</label>
+
+                        <input class="form-check-input" type="radio" name="pvp" id="pvp_1" value="true" checked>
+                        <label class="form-check-label" for="pvp_1">
+                            開啟
+                        </label>
+                        <input class="form-check-input" type="radio" name="pvp" id="pvp_2" value="false">
+                        <label class="form-check-label" for="pvp_2">
+                            關閉
+                        </label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="" class="form-label">* 難度:</label>
+
+                        <input class="form-check-input" type="radio" name="difficulty" id="difficulty_0" value="0"
+                               >
+                        <label class="form-check-label" for="difficulty_0">
+                            和平
+                        </label>
+                        <input class="form-check-input" type="radio" name="difficulty" id="difficulty_1" value="1" checked>
+                        <label class="form-check-label" for="difficulty_1">
+                            簡單
+                        </label>
+                        <input class="form-check-input" type="radio" name="difficulty" id="difficulty_2" value="2">
+                        <label class="form-check-label" for="difficulty_2">
+                            普通
+                        </label>
+                        <input class="form-check-input" type="radio" name="difficulty" id="difficulty_3" value="3">
+                        <label class="form-check-label" for="difficulty_3">
+                            困難
+                        </label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="" class="form-label">* 指令方塊:</label>
+
+                        <input class="form-check-input" type="radio" name="enable_command_block"
+                               id="enable_command_block_1" value="true" checked>
+                        <label class="form-check-label" for="enable_command_block_1">
+                            開啟
+                        </label>
+                        <input class="form-check-input" type="radio" name="enable_command_block"
+                               id="enable_command_block_2" value="false">
+                        <label class="form-check-label" for="enable_command_block_2">
+                            關閉
+                        </label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="" class="form-label">* 出現怪物:</label>
+
+                        <input class="form-check-input" type="radio" name="spawn_monsters" id="spawn_monsters_1"
+                               value="true" checked>
+                        <label class="form-check-label" for="spawn_monsters_1">
+                            開啟
+                        </label>
+                        <input class="form-check-input" type="radio" name="spawn_monsters" id="spawn_monsters_2"
+                               value="false">
+                        <label class="form-check-label" for="spawn_monsters_2">
+                            關閉
+                        </label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="" class="form-label">* 生成村莊、遺跡、廢礦:</label>
+
+                        <input class="form-check-input" type="radio" name="generate_structures"
+                               id="generate_structures_1" value="true" checked>
+                        <label class="form-check-label" for="generate_structures_1">
+                            開啟
+                        </label>
+                        <input class="form-check-input" type="radio" name="generate_structures"
+                               id="generate_structures_2" value="false">
+                        <label class="form-check-label" for="generate_structures_2">
+                            關閉
+                        </label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="" class="form-label">地圖種子碼:</label>
+                        <input type="text" class="form-control is-invalid2" id="level_seed" value="" maxlength="100">
+                        <div class="invalid-feedback">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="" class="form-label">* 開啟防噴:</label>
+
+                        <input class="form-check-input" type="radio" name="gamerule_xxx"
+                               id="ggamerule_xxx_1" value="true" checked>
+                        <label class="form-check-label" for="ggamerule_xxx_1">
+                            開啟
+                        </label>
+                        <input class="form-check-input" type="radio" name="gamerule_xxx"
+                               id="gamerule_xxx_2" value="false">
+                        <label class="form-check-label" for="gamerule_xxx_2">
+                            關閉
+                        </label>
+                    </div>
+                    <!-- end -->
+                </div>
+            </div>
+
+            <div class="mb-3">
+            </div>
+            <div class="mb-3 text-center">
+                <button id="btnDestoryServer" type="button" class="btn btn-danger" onclick="btn_destroy_server();">
+                    移除伺服器
+                </button>
+                <button type="button" class="btn btn-primary col-3" onclick="btn_save();">儲存</button>
+                <button type="button" class="btn btn-dark col-3" onclick="btn_close();">關閉</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div style="padding-bottom: 10px;"></div>
+
+</body>
+</html>
+
+<script>
+    let consoleTitle = '[/form_server.html]';
+    const path = require('path');
+    const {remote, ipcRenderer} = require('electron');
+    const {app, dialog} = remote;
+
+    //PS: 攔截錯誤送給 main process
+    window.onerror = function(error, url, line) {
+        ipcRenderer.send('errorInWindow', error, url, line);
+    };
+
+    const enums = remote.require('./common/enums');
+    const myElectron = remote.require('./common/myElectron');
+    const mydb = remote.getGlobal('MyDB');  //資料庫模組
+    const myMCServerManager = remote.require('./common/myMCServerManager');   //MC伺服器管理
+
+    //....................................................................................
+    /**
+     * 接收主進程(index.js)的訊息
+     */
+
+    //載入伺服器資料到表單 - ok
+    //call: app/index.js => ipcMain.on('openwin_form_server')
+    ipcRenderer.on('load', async (event, param1) => {
+
+        //console.log(consoleTitle, '[ipcRenderer][load2] param1:', param1);
+        await load_server(param1.server_id);
+
+    });
+
+    //....................................................................................
+
+    //PS: 取支援的版本
+    let getMCVersions = () => {
+
+        let consoleTitle2 = consoleTitle + '[getMCVersions]';
+
+        //PS: 取可安裝的 MC 版本清單
+        let MCVersions = myMCServerManager.getVersionList();
+        //console.log(consoleTitle2, 'MCVersions:', MCVersions);
+
+        //產生下拉清單
+        let select = document.getElementById("version");
+        MCVersions.forEach((item, idx) => {
+            //console.log(consoleTitle, 'idx:', idx, ',item:', item);
+            let option = document.createElement("option");
+            option.text = item.v;
+            option.value = item.v;
+            if (idx === 0) option.selected = 'selected';
+
+            select.appendChild(option);
+        });
+
+    }
+
+
+    /**
+     * 讀取修改的伺服器資料 - ok
+     *
+     * @param server_id
+     * @return {Promise<void>}
+     *
+     * call: ipcRenderer.on('load')
+     */
+    let SERVER_ID = null;    //修改
+    let SERVER_DATA = null;  //伺服器設定資料
+    let mcServerManager = null;
+    let SERVER_ISRUNNING = false;  //true=已啟動, false=已停止
+
+    let load_server = async (server_id) => {
+
+        let consoleTitle2 = consoleTitle + '[load_server]';
+        //console.log(consoleTitle2, 'server_id:', server_id);
+
+        getMCVersions();   //PS: 取支援的版本
+
+        if (server_id) {
+            //PS: 修改
+
+            //設定公用變數
+            SERVER_ID = server_id;     //伺服器ID
+            mcServerManager = new myMCServerManager(SERVER_ID);     //建立伺服器管理實例
+            let mcServerLauncher = await mcServerManager.server();  //取單一伺服器 MCLauncher instance實例
+            SERVER_ISRUNNING = mcServerLauncher.isRunning;          //true=已啟動, false=已停止
+
+            //取DB資料
+            let server = await mydb.getServer(server_id);
+            SERVER_DATA = server;
+            //console.log(consoleTitle2, 'server:', server);
+
+            if (server) {
+
+                //填入表單
+                document.getElementById('version').value = server.version;
+                document.getElementById('motd').value = server.motd;
+                document.getElementById('version').value = server.version;
+                //document.getElementById('server_port').value = server.server_port;
+                document.getElementById('level_name').value = server.level_name;
+                document.getElementById('ops').value = server.ops;
+                document.getElementById('level_seed').value = server.level_seed;
+
+                setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="max_players"]'), server.max_players);
+                setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="online_mode"]'), server.online_mode);
+                setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="gamemode"]'), server.gamemode);
+                setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="level_type"]'), server.level_type);
+                setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="allow_nether"]'), server.allow_nether);
+                setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="pvp"]'), server.pvp);
+                setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="difficulty"]'), server.difficulty);
+                setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="enable_command_block"]'), server.enable_command_block);
+                setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="spawn_monsters"]'), server.spawn_monsters);
+                setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="generate_structures"]'), server.generate_structures);
+
+            }
+
+            //PS: Disabled 不可修改的項目
+            document.getElementById('version').setAttribute('disabled','disabled');
+            //document.getElementById('server_port').setAttribute('disabled','disabled');
+
+            // document.getElementById('version').querySelectorAll(':not([selected])').forEach(option => {
+            //     option.disabled = true
+            // })
+
+            //PS: 伺服器正在執行
+            if (SERVER_ISRUNNING) {
+                document.getElementById('notice').style.display = 'block';  //顯示訊息
+                document.getElementById('btnDestoryServer').setAttribute('disabled','disabled');  //禁用 BUTTON: 移除伺服器
+            }
+
+        } else {
+            //PS: 新增
+
+            //隱藏功能
+            document.getElementById('btnDestoryServer').style.display = 'none';  //BUTTON: 移除伺服器
+
+        }
+
+    }
+
+
+    /**
+     * Radio Checked
+     *
+     * @param {html input type=radio} vRadioObj
+     * @param {the radiobutton with this value will be checked} vValue
+     */
+    function setCheckedValueOfRadioButtonGroup(vRadioObj, vValue) {
+        var radios = document.getElementsByName(vRadioObj.name);
+        for (var j = 0; j < radios.length; j++) {
+            if (radios[j].value === vValue + '') {
+                radios[j].checked = true;
+                break;
+            }
+        }
+    }
+
+    //....................................................................................
+    //Form Element
+    let form = document.getElementById('frm1');
+
+    /**
+     * 儲存 - ok
+     */
+    let btn_save = async () => {
+
+        let consoleTitle2 = consoleTitle + '[btn_save]';
+        //console.log(consoleTitle2, 'form:', form);
+
+        if (!form.checkValidity()) {
+            //console.log(consoleTitle2, 'form invalid');
+        } else {
+            //console.log(consoleTitle2, 'form valid');
+
+            //PS: 取表單欄位資料
+            let motd = document.getElementById('motd').value;
+            let version = document.getElementById('version').value;
+            let server_port = null;  //document.getElementById('server_port').value;
+            let level_name = document.getElementById('level_name').value;
+            let ops = document.getElementById('ops').value;
+
+            let level_seed = document.getElementById('level_seed').value;
+            let online_mode = document.querySelector('input[name="online_mode"]:checked').value;
+            let gamemode = document.querySelector('input[name="gamemode"]:checked').value;
+
+            let max_players = document.querySelector('input[name="max_players"]:checked').value;
+
+            let level_type = document.querySelector('input[name="level_type"]:checked').value;
+            let allow_nether = document.querySelector('input[name="allow_nether"]:checked').value;
+            let pvp = document.querySelector('input[name="pvp"]:checked').value;
+            let difficulty = document.querySelector('input[name="difficulty"]:checked').value;
+            let enable_command_block = document.querySelector('input[name="enable_command_block"]:checked').value;
+            let spawn_monsters = document.querySelector('input[name="spawn_monsters"]:checked').value;
+            let generate_structures = document.querySelector('input[name="generate_structures"]:checked').value;
+
+
+            //PS: 驗證motd只能有英數字
+            let valid_server_name = function(server_name) {
+                var regex_valid_server_name = /^(?!\.)[a-zA-Z0-9_\. ]+$/;
+                return regex_valid_server_name.test(server_name);
+            }
+            let isValid_motd = valid_server_name(motd);
+            if (!isValid_motd) {
+                myElectron.showDialogMessage('錯誤', '伺服器介紹 限輸入英文、數字。');
+                return;
+            }
+
+
+            //PS: Save
+            if (SERVER_ID) {
+
+                //PS: 不允許修改的欄位,取原始值
+                version = SERVER_DATA.version;
+                server_port = SERVER_DATA.server_port;
+                level_name = SERVER_DATA.level_name;
+
+                //修改
+                let sqlu = `Update server
+                            Set motd                 = ?,
+                                version              = ?,
+                                server_port          = ?,
+                                level_name           = ?,
+                                ops                  = ?,
+                                level_seed           = ?,
+                                online_mode          = ?,
+                                gamemode             = ?,
+                                level_type           = ?,
+                                allow_nether         = ?,
+                                pvp                  = ?,
+                                difficulty           = ?,
+                                enable_command_block = ?,
+                                spawn_monsters       = ?,
+                                generate_structures  = ?,
+                                max_players          = ?
+                            Where server_id = ?`;
+
+                let sqluParams = [motd, version, server_port, level_name,
+                    ops, level_seed, online_mode, gamemode, level_type,
+                    allow_nether, pvp, difficulty, enable_command_block,
+                    spawn_monsters, generate_structures, max_players,
+                    SERVER_ID];
+                await mydb.db.run(sqlu, sqluParams);
+
+
+                //PS: 覆寫 server.properties, ops.json
+                //let mcServerManager = new myMCServerManager(SERVER_ID);  //建立伺服器管理實例
+                await mcServerManager.resetLauncherOptions();  //PS: 更新 Launcher 的 [MC伺服器設定值],server.properties, ops.txt
+
+                let _msg = `更新完成${SERVER_ISRUNNING ? '，設定將在伺服器重啟後生效':''}。`
+                myElectron.showDialogMessage('儲存', _msg);
+
+            } else {
+
+                let mcServerManager = new myMCServerManager(SERVER_ID);  //建立伺服器管理實例
+                server_port = await mcServerManager.getAvailableServerPort();
+
+                //新增
+                let sqli = `Insert into server (motd, version, server_port, level_name,
+                                                ops, level_seed, online_mode, gamemode, level_type,
+                                                allow_nether, pvp, difficulty, enable_command_block, spawn_monsters,
+                                                generate_structures, max_players)
+                            values (?, ?, ?, ?,
+                                    ?, ?, ?, ?, ?,
+                                    ?, ?, ?, ?, ?,
+                                    ?, ?)`;
+                let sqliParams = [
+                    motd, version, server_port, level_name,
+                    ops, level_seed, online_mode, gamemode, level_type,
+                    allow_nether, pvp, difficulty, enable_command_block, spawn_monsters,
+                    generate_structures, max_players
+                ];
+                await mydb.db.run(sqli, sqliParams);
+
+
+                myElectron.showDialogMessage('儲存', '新增完成。');
+
+            }
+
+            //關閉視窗
+            btn_close();
+
+        }
+
+        form.classList.add('was-validated');  //bootstrap5 顯示UI的驗證訊息
+
+    }
+
+
+    //BUTTON: 移除伺服器 - ok
+    let btn_destroy_server = async () => {
+
+        let consoleTitle2 = consoleTitle + '[btn_destroy_server]';
+        console.log(consoleTitle2, 'SERVER_ID:', SERVER_ID);
+
+        //詢問是否確定刪除
+        let btnClickIdx = myElectron.showConfirmDialog({
+            type: 'warning',
+            title: '移除',
+            message: '確定移除伺服器 (包含伺服器資料檔、地圖...) ?',
+            buttons: ["確定", "取消"]
+        });
+        //console.log(consoleTitle2, 'btnClickIdx:', btnClickIdx);
+
+        if (btnClickIdx === 0) {
+
+            //TODO: 改到 myMCServerManager.js 處理
+            //---------
+            //PS: 刪除伺服器記錄
+            await mydb.destroy_server(SERVER_ID);
+
+            //PS: 將伺服器目錄丟入垃圾桶
+            if (mcServerManager) {
+                let serverFolderPath = path.join(mcServerManager.serverFolderPath, "/");
+                console.log(consoleTitle2, 'serverFolderPath:', serverFolderPath);
+                await myElectron.shellMoveItemToTrash(`${serverFolderPath}`);  //PS：路徑最後面必需有 /
+            }
+
+
+            //---------
+            //關閉視窗
+            btn_close();
+
+        }
+
+    }
+
+
+    /**
+     * 關閉視窗 - ok
+     */
+    let btn_close = () => {
+
+        ipcRenderer.send('ipcMain_RenderList', {s: 'btn_close', data: {}});   //PS: 傳遞給 [主進程]
+
+        remote.getCurrentWindow().close();  //關閉自己
+
+    }
+
+    //....................................................................................
+</script>

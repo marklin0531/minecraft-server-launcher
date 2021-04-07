@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Splash</title>
+    <style>
+        html, body {
+            user-select: none; /*禁止用户用鼠标在页面上选中文字、图片等，也就是，让页面内容不可选。也可以只允许用户选中文字，或者全部都放开*/
+            background-color: white;
+            margin: 0;
+            height: 100%;
+            background-image: url("images/splash/1.jpg");
+        }
+
+        #header {
+            background-color: yellow;
+            height: 100px;
+            width: 100%;
+        }
+
+        #holder {
+            min-height: 100%;
+            position: relative;
+        }
+
+        #body {
+            padding-bottom: 26px;
+        }
+
+        #footer {
+            vertical-align: top;
+            text-align: center;
+            background-color: lime;
+            bottom: 0;
+            height: 21px;
+            left: 0;
+            position: absolute;
+            right: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+<div id="holder">
+    <!--    <div id="header">Title</div>-->
+    <!--    <div id="body">Body</div>-->
+    <div id="footer">
+        <small>Loading...</small>
+    </div>
+</div>
+</body>
+</html>

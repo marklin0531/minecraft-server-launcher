@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>minecraft伺服器 - 新增</title>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';"/>
+    <link href="./css/bootstrap-v5.min.css" rel="stylesheet">
+    <script src="./css/bootstrap.bundle.min.js"></script>
+    <style>
+        body {
+            user-select: none; /*禁止用户用鼠标在页面上选中文字、图片等，也就是，让页面内容不可选。也可以只允许用户选中文字，或者全部都放开*/
+            background-color: white;
+            margin: 0;
+        }
+        table {
+            margin-bottom: 0 !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <script id="template1" type="x-tmpl-mustache">
+        <!--PS: Win10 Build - background-image 無法取本機路徑-->
+        <!--<div class="container" style="height:200px;background-image:url('{{item.logo}}');background-repeat:no-repeat;background-size:cover;">
+           <h5 class="card-title" style="color:white;">{{item.motd}}</h5>
+           <p class="card-text" style="color:white;">版本: {{item.version}}</p>
+        </div> -->
+
+        <div class="container" style="height:200px;padding-left:0 !important;padding-right:0 !important;">
+           <img class="card-img" style="width:100%;" src="{{item.logo}}" alt="{{item.motd}}">
+          <h5 class="card-title" style="color:white;">{{item.motd}}</h5>
+          <p class="card-text" style="color:white;">版本: {{item.version}}</p>
+        </div>
+
+        <table class="table table-striped table-dark">
+          <thead>
+            <tr>
+              <th scope="col" style="text-align:center;">選擇</th>
+              <th scope="col">地圖目錄</th>
+              <th scope="col">執行目錄</th>
+              <th scope="col" style="text-align:right;">
+                  <button type="button" class="btn btn-sm btn-warning" onclick="btn_create_map_folder();">新增地圖目錄</button>
+                  <button type="button" class="btn btn-sm btn-dark col-3" onclick="btn_close();">關閉</button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+          {{#worldFolders}}
+            <tr>
+              <th scope="row" style="text-align:center;">
+                  <input type="radio" class="btn btn-lg" id="{{folder}}" name="level_name" value="{{folder}}" onclick="btn_select_map_folder('{{folder}}',{{_id}})" {{#selected}}checked{{/selected}}>
+              </th>
+              <td>
+                 <label for="{{folder}}">{{folder}}</label>
+              </td>
+              <td colspan="2">
+                 {{#removeable}}
+                    <button type="button" class="btn btn-sm btn-danger col-3" id="btn_remove_map_folder_{{_id}}" onclick="btn_remove_map_folder('{{folder}}')">刪除</button>
+                 {{/removeable}}
+                 {{#clearable}}
+                    <button type="button" class="btn btn-sm btn-warning col-3" onclick="btn_clear_map_folder('{{folder}}')">清空</button>
+                 {{/clearable}}
+                 <button type="button" class="btn btn-sm btn-primary col-3" onclick="btn_open_map_folder('{{folder}}');">開啟</button>
+                 <button type="button" class="btn btn-sm btn-primary col-3" onclick="btn_open_map_folder('{{folder}}');">安裝</button>
+              </td>
+            </tr>
+          {{/worldFolders}}
+          </tbody>
+        </table>
+    </script>
+    <div class="row" id="container1" style="margin-bottom: 0;">
+        <!-- template1 Render HTML Here -->
+    </div>
+</div>
+
+</body>
+</html>
+
+<script>
+    let consoleTitle = '[/form_settinng_server_map.html]';
+    const path = require('path');
+    const {remote, ipcRenderer} = require('electron');
+    const {app, dialog} = remote;
+
+    //PS: 攔截錯誤送給 main process
+    window.onerror = function (error, url, line) {
+        ipcRenderer.send('errorInWindow', error, url, line);
+    };
+
+    const Mustache = require('mustache');  //樣版引擎 https://github.com/janl/mustache.js
+    const enums = remote.require('./common/enums');
+    const myElectron = remote.require('./common/myElectron');
+    const mydb = remote.getGlobal('MyDB');  //資料庫模組
+    const myMCServerManager = remote.require('./common/myMCServerManager');
+
+
+    //....................................................................................
+    /**
+     * 接收主進程(index.js)的訊息
+     */
+
+    //載入伺服器資料到表單 - ok
+    //call: app/index.js => ipcMain.on('openwin_form_server')
+    ipcRenderer.on('load', async (event, param1) => {
+
+        //console.log(consoleTitle, '[ipcRenderer][load2] param1:', param1);
+        await load_server(param1.server_id);
+
+    });
+
+    //....................................................................................
+    /**
+     * 讀取修改的伺服器資料 - ok
+     *
+     * @param server_id
+     * @return {Promise<void>}
+     *
+     * call: ipcRenderer.on('load')
+     */
+    let SERVER_ID = null;          //修改
+    let SERVER_DATA = null;        //伺服器設定資料
+    let SERVER_FolderPath = null;  //伺服器目錄
+    let SERVER_worldFolders = [];  //地圖目錄清單
+    let mcServerManager = null;    //建立伺服器管理實例
+
+    let load_server = async (server_id) => {
+
+        let consoleTitle2 = consoleTitle + '[load_server]';
+        console.log(consoleTitle2, 'server_id:', server_id);
+
+        if (!server_id) return;    //參數錯誤
+
+        //設定公用變數
+        SERVER_ID = server_id;     //伺服器ID
+
+        //PS: 讀取伺服器設定資料
+        SERVER_DATA = await mydb.getServer(SERVER_ID);
+        console.log(consoleTitle2, 'SERVER_DATA:', SERVER_DATA);
+
+        if (SERVER_DATA) {
+
+            //---------
+            //PS: 取單一伺服器 instance實例
+            mcServerManager = new myMCServerManager(SERVER_ID);  //建立伺服器管理實例
+            //let mcServerLauncher = await mcServerManager.server();   //取單一伺服器 instance實例
+            //console.log(consoleTitle2, `=== 建立單一實例 mcServerLauncher[${SERVER_ID}]:`, mcServerLauncher);
+            //---------
+
+            //PS: 讀取 [伺服器目錄下的] - [地圖目錄] 清單
+            SERVER_worldFolders = await mcServerManager.getWorldFolders();  //[{folder: 'world', hasFiles: false, selected: true, removeable: false}]
+            SERVER_FolderPath = mcServerManager.serverFolderPath;
+
+
+            //PS: 伺服器清單HTML
+            await RenderList();
+
+        }
+
+    }
+
+    //....................................................................................
+    /**
+     * 動態產生 - 伺服器清單HTML - ok
+     */
+    let RenderList = async function () {
+
+        let consoleTitle2 = consoleTitle + '[RenderList]';
+        console.log(consoleTitle2);
+
+        let item = SERVER_DATA;  //{}
+
+        if (item) {
+
+            console.log(consoleTitle2, `+++ 伺服器設定資料 item:`, item);
+
+            //---------
+            //PS: 輸出HTML
+            var template1 = document.getElementById('template1').innerHTML;
+            var rendered1 = Mustache.render(template1, {
+                item,
+                worldFolders: SERVER_worldFolders
+            });
+            document.getElementById('container1').innerHTML = rendered1;  //Render後的html放入Container
+            //---------
+        }
+        //console.log(consoleTitle2, 'done');
+
+    }
+
+    //....................................................................................
+
+    //PS: 變更地圖 - ok
+    let btn_select_map_folder = async(folderName, _id) => {
+
+        let consoleTitle2 = consoleTitle + '[btn_select_map_folder]';
+        console.log(consoleTitle2, 'folderName:', folderName, ', _id:', _id);
+
+        await mydb.change_level_name(SERVER_ID, folderName);  //PS: 更新 DB 設定
+
+        await mcServerManager.resetLauncherOptions();  //PS: 更新 Launcher 的 [MC伺服器設定值],server.properties, ops.txt
+
+    }
+
+    //PS: 新增地圖目錄 - ok
+    let btn_create_map_folder = async () => {
+
+        let consoleTitle2 = consoleTitle + '[btn_create_map_folder]';
+        if (mcServerManager) {
+
+            let available_folder = await mcServerManager.getAvailableMapFolder();
+            console.log(consoleTitle2, 'available_folder:', available_folder);
+
+            if (available_folder) {
+                mcServerManager.createMapFolder(available_folder);
+
+                //PS: Reload
+                await load_server(SERVER_ID);
+            }
+
+        }
+
+    }
+
+    //PS: 移除地圖目錄 - ok
+    let btn_remove_map_folder = async (folderName) => {
+
+        let consoleTitle2 = consoleTitle + '[btn_remove_map_folder]';
+
+        //PS: 取出當前選擇的地圖
+        let level_name = document.querySelector('input[name=level_name]:checked').value;
+        if (level_name === folderName) {
+            myElectron.showDialogMessage('錯誤', '目前選擇的地圖不可刪除');
+            return;
+        }
+
+        if (mcServerManager) {
+            //console.log(consoleTitle2, 'folderName:', folderName);
+
+            //詢問是否確定刪除
+            let btnClickIdx = myElectron.showConfirmDialog({
+                type: 'warning',
+                title: '移除',
+                message: '確定刪除地圖?',
+                buttons: ["確定", "取消"]
+            });
+            if (btnClickIdx === 0) {
+                mcServerManager.removeMapFolder(folderName);  //PS: 刪除地圖目錄
+                await load_server(SERVER_ID);  //PS: Reload
+            }
+
+        }
+
+    }
+
+    //PS: 清空地圖目錄 - ok
+    let btn_clear_map_folder = async (folderName) => {
+
+        let consoleTitle2 = consoleTitle + '[btn_clear_map_folder]';
+
+        //PS: 取出當前選擇的地圖
+        // let level_name = document.querySelector('input[name=level_name]:checked').value;
+        // if (level_name === folderName) {
+        //     myElectron.showDialogMessage('錯誤', '目前選擇的地圖不可清空');
+        //     return;
+        // }
+
+        if (mcServerManager) {
+
+            //詢問是否確定
+            let btnClickIdx = myElectron.showConfirmDialog({
+                type: 'warning',
+                title: '清空',
+                message: '確定清空地圖?',
+                buttons: ["確定", "取消"]
+            });
+            if (btnClickIdx === 0) {
+                //PS: 將地圖目錄丟入垃圾桶
+                let _folderPath = path.join(`${SERVER_FolderPath}`, `${folderName}`, '/');
+                console.log(consoleTitle2, 'folderName:', folderName, ', _folderPath:', _folderPath);
+
+                await myElectron.shellMoveItemToTrash(_folderPath);  //PS：路徑最後面必需有 /
+
+                //PS: 重新建立目錄
+                mcServerManager.createMapFolder(folderName);
+
+                //PS: Reload
+                await load_server(SERVER_ID);
+            }
+
+        }
+
+    }
+
+    //PS: 開啟地圖目錄 - ok
+    let btn_open_map_folder = async (folderName) => {
+
+        let consoleTitle2 = consoleTitle + '[btn_open_map_folder]';
+
+        if (SERVER_ID) {
+            let _folderPath = path.join(`${SERVER_FolderPath}`, `${folderName}`, '/');
+            console.log(consoleTitle2, 'folderName:', folderName, ', _folderPath:', _folderPath);
+            await myElectron.shellOpenFolderPath(_folderPath);
+        }
+
+    }
+
+    //PS: 選擇目錄 - 目前沒用到
+    let btn_map_folder_picker = async () => {
+
+        let options = {title: '選擇地圖目錄', defaultPath: SERVER_FolderPath, properties: ["openDirectory"]}
+        let {filePaths, canceled} = await dialog.showOpenDialog(options);
+
+        console.log('btn_folder_picker:', canceled, filePaths);
+
+        if (!canceled) {
+            alert(filePaths[0]);
+        }
+
+    }
+
+
+    /**
+     * 關閉視窗 - ok
+     */
+    let btn_close = () => {
+
+        ipcRenderer.send('ipcMain_RenderList', {s: 'btn_close', data: {}});   //PS: 傳遞給 [主進程]
+
+        remote.getCurrentWindow().close();  //關閉自己
+
+    }
+    //....................................................................................
+</script>

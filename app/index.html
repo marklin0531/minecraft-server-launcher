@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>minecraft伺服器-啟動器</title>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';"/>
+    <link href="./css/bootstrap-v5.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./css/bootstrap-icons.css">
+    <style>
+        body {
+            user-select: none; /*禁止用户用鼠标在页面上选中文字、图片等，也就是，让页面内容不可选。也可以只允许用户选中文字，或者全部都放开*/
+            background-color: white;
+            margin: 0;
+            /*background-image: url("images/background/mine.jpg");*/
+        }
+    </style>
+</head>
+<body>
+
+<div class="pb-2 px-3" style="padding-top: 20px;">
+    <div class="row">
+        <div class="col-sm-6">
+            <div class="alert alert-danger"><span id="predictionCanStartServerTotal"></span></div>
+        </div>
+        <div class="col-sm-6">
+            <div class="d-grid gap-1 d-flex justify-content-end">
+<!--                <a href="javascript:void(0);" class="btn btn-info" onclick="RenderList();">重新載入伺服器清單</a>-->
+                <button type="button" class="btn btn-warning" onclick="btn_server_create();">下載地圖</button>
+                <button type="button" class="btn btn-warning" onclick="btn_server_create();">新增伺服器</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <script id="template1" type="x-tmpl-mustache">
+    {{#list}}
+        <div class="col-sm-6" style="padding-top:10px;">
+            <div class="card bg-dark text-white">
+              <div>
+                 <img class="card-img" src="{{logo}}" alt="{{motd}}">
+              </div>
+              <div class="card-img-overlay">
+                <h5 class="card-title">{{motd}}</h5>
+                <p class="card-text">版本: {{version}}</p>
+                <p class="card-text">
+                   <span onclick="copyTextToClipboard('{{publicConnection}}');" title="複制" style="cursor:pointer">外網連線: {{publicConnection}} <i class="bi bi-clipboard"></i></span><br>
+                   <span onclick="copyTextToClipboard('{{privateConnection}}');" title="複制" style="cursor:pointer">內網連線: {{privateConnection}} <i class="bi bi-clipboard"></i></span>
+                </p>
+              </div>
+                <div class="card-footer text-end" style="z-index: 1000;">
+                    <!--<a href="javascript:void(0);" class="btn btn-warning" onclick="btn_view_server_log('{{server_id}}');">啟動台</a>-->
+                    <!--isRunning: {{isRunning}}, server_id: {{server_id}}-->
+
+                    {{#isRunning}}
+                       <!--伺服器已啟動-->
+                       <!--<button id="btnServerStop{{server_id}}" class="btn btn-danger" type="button" onclick="btn_server_stats('{{server_id}}');">
+                          資源
+                       </button>-->
+                       <button id="btnServerStop{{server_id}}" class="btn btn-danger" type="button" onclick="btn_server_restart('{{server_id}}');">
+                          重啟
+                       </button>
+                       <button id="btnServerStop{{server_id}}" class="btn btn-danger" type="button" onclick="btn_server_stop('{{server_id}}');">
+                          停止
+                       </button>
+                    {{/isRunning}}
+
+                    {{^isRunning}}
+                       <!--伺服器未啟動-->
+
+                       <button id="btnServerStart{{server_id}}" class="btn btn-primary" type="button" onclick="btn_server_start('{{server_id}}');">
+                          啟動
+                       </button>
+                       <a href="javascript:void(0);" class="btn btn-warning" onclick="btn_setting_server_map('{{server_id}}');">設定地圖</a>
+
+                    {{/isRunning}}
+
+                    <a href="javascript:void(0);" class="btn btn-warning" onclick="btn_server_create('{{server_id}}');">設定伺服器</a>
+                </div>
+            </div>
+        </div>
+    {{/list}}
+
+    </script>
+    <div class="row" id="container1">
+        <!-- template1 Render HTML Here -->
+    </div>
+</div>
+
+<div style="padding-bottom: 10px;"></div>
+
+</body>
+</html>
+
+<script>
+    let consoleTitle = '[/index.html]';
+    const {remote, ipcRenderer} = require('electron');
+    const {app, dialog} = remote;
+
+    //PS: 攔截錯誤送給 main process
+    window.onerror = function(error, url, line) {
+        ipcRenderer.send('errorInWindow', error, url, line);
+    };
+
+    const myElectron = remote.require('./common/myElectron');
+    const Mustache = require('mustache');  //樣版引擎 https://github.com/janl/mustache.js
+    const enums = require('./common/enums');
+    const mydb = remote.getGlobal('MyDB');  //資料庫模組
+    const machineResource = remote.getGlobal('machineResource');  //取主機資源
+    const myMCServerManager = remote.require('./common/myMCServerManager');   //MC伺服器管理
+
+    //....................................................................................
+    //PS: 複制文字到剪貼簿
+    let copyTextToClipboard = (text) => {
+        myElectron.copyTextToClipboard(text);
+        myElectron.showDialogMessage('Copy',`已將 ${text} 複制到剪貼簿囉`);
+    }
+
+    //....................................................................................
+    //PS: 粗估推算主機資源可啟動的伺服器數目 (1Server*1GB RAM)
+    let predictionCanStartServerTotal = () => {
+        let consoleTitle2 = consoleTitle + '[predictionCanStartServerTotal]';
+
+        let canStartServerTotal = Math.floor((machineResource.memInfo.freeMemMb-300) / 1024);
+
+        let msg = `根據電腦資源推算，建議最多啟動 ${canStartServerTotal}台伺服器`;
+        if (canStartServerTotal < 1) {
+            msg = `電腦資源不足，不建議啟動伺服器，以免當機`;
+        }
+
+        document.getElementById('predictionCanStartServerTotal').innerHTML = msg;
+    }
+    predictionCanStartServerTotal();
+
+    //....................................................................................
+    /**
+     * 接收主進程(index.js)的訊息
+     */
+    ipcRenderer.on('ipcRenderer_RenderList', async (event, param1) => {
+        console.log(consoleTitle, '[ipcRenderer][ipcRenderer_RenderList]');
+        await RenderList();
+    });
+
+    //....................................................................................
+    /**
+     * 動態產生 - 伺服器清單HTML - ok
+     */
+    let RenderList = async function () {
+
+        let consoleTitle2 = consoleTitle + '[RenderList]';
+        console.log(consoleTitle2);
+
+        //---------
+        //PS: 取伺服器設定資料的清單
+        const serverList = await mydb.getServerList();
+
+        //PS: 設定背景圖
+        let body_backgroundImage = '1.jpg';  //深色背景
+        if (serverList.length > 0) body_backgroundImage = '1-opacity.png';  //淡色背景
+        document.body.style.backgroundImage = `url('images/background/${body_backgroundImage}')`;
+
+        for (let [idx, item] of serverList.entries()) {
+
+            //=== PS: 伺服器初始化
+            let mcServerManager = new myMCServerManager(item.server_id);  //建立伺服器管理實例
+            let mcServerLauncher = await mcServerManager.server();   //取單一伺服器 MCLauncher instance實例
+            console.log(consoleTitle2, `=== 建立單一實例 mcServerLauncher[${item.server_id}]:`, mcServerLauncher);
+            //===
+
+            //PS: 增加 伺服器狀態
+            item.isRunning = mcServerLauncher.isRunning;  //true=已啟動, false=已停止
+
+            //=== 內/外網IP
+            item.privateConnection = `${machineResource.privateIP}:${item.server_port}`;  //內網IP:PORT
+            item.publicConnection = `${machineResource.publicIP}:${item.server_port}`;    //外網IP:PORT
+            //===
+
+            console.log(consoleTitle2, `+++ 伺服器設定資料 item[${idx}][${item.server_id}]:`, item);
+
+            //PS: 最後一筆顯示出全部的實例
+            if (idx === serverList.length - 1) console.log(consoleTitle2, '--- 全部實例 mcServerManager.serverLaunchers:', mcServerManager.serverLaunchers);
+
+        }
+        //console.log(consoleTitle2, 'serverList:', serverList);
+
+        //---------
+        //PS: 輸出HTML
+        var template1 = document.getElementById('template1').innerHTML;
+        var rendered1 = Mustache.render(template1, {
+            list: serverList
+        });
+        document.getElementById('container1').innerHTML = rendered1;  //Render後的html放入Container
+        //---------
+
+        //console.log(consoleTitle2, 'done');
+
+    }
+
+    //....................................................................................
+    //region 單一伺服器管理
+
+    //BUTTON: 啟動伺服器 - ok
+    let btn_server_restart = async (server_id) => {
+
+            let consoleTitle2 = consoleTitle + '[btn_server_restart]';
+            console.log(consoleTitle2);
+
+            //呼叫 [主進程]
+            ipcRenderer.send('server_restart', {server_id});
+
+        }
+
+    //BUTTON: 啟動伺服器 - ok
+    let btn_server_start = async (server_id) => {
+
+        let consoleTitle2 = consoleTitle + '[btn_server_start]';
+        console.log(consoleTitle2);
+
+        //呼叫 [主進程]
+        ipcRenderer.send('server_start', {server_id});
+
+    }
+
+    //BUTTON: 停止伺服器 - ok
+    let btn_server_stop = async (server_id) => {
+
+        let consoleTitle2 = consoleTitle + '[btn_server_stop]';
+        console.log(consoleTitle2);
+
+        //呼叫 [主進程]
+        ipcRenderer.send('server_stop', {server_id});
+
+    }
+
+    //BUTTON: 伺服器使用資源 - ok
+    let btn_server_stats = async (server_id) => {
+
+        let consoleTitle2 = consoleTitle + '[btn_server_stats]';
+        console.log(consoleTitle2);
+
+        //呼叫 [主進程]
+        ipcRenderer.send('server_stats', {server_id});
+
+    }
+
+    //BUTTON: 設定伺服器地圖-表單 - ok
+    let btn_setting_server_map = async (server_id) => {
+
+        let consoleTitle2 = consoleTitle + '[btn_setting_server_map]';
+        console.log(consoleTitle2);
+
+        //呼叫 [主進程]
+        ipcRenderer.send('openwin_setting_server_map', {server_id});
+
+    }
+
+    //BUTTON: 伺服器LOG-表單 - ok
+    let btn_view_server_log = async (server_id) => {
+
+        console.log(consoleTitle, '[btn_view_server_log]');
+
+        //呼叫 [主進程] 開啟 [伺服器LOG表單] 視窗
+        ipcRenderer.send('openwin_view_server_log', {server_id});
+
+    }
+    //endregion
+    //....................................................................................
+    //region 主要管理
+
+    //BUTTON: 新增伺服器-表單 - ok
+    let btn_server_create = async (server_id) => {
+
+            console.log(consoleTitle, '[btn_server_create]');
+
+            //呼叫 [主進程] 開啟 [新增伺服器表單] 視窗
+            ipcRenderer.send('openwin_setting_server', {server_id});
+
+        }
+
+    //BUTTON: 重新載入伺服器清單 - ok
+    let btn_reload_list = async () => {
+        await RenderList();
+    }
+    //endregion
+    //....................................................................................
+    (async () => {
+
+        await RenderList();  //Start
+
+    })();
+    //....................................................................................
+</script>
