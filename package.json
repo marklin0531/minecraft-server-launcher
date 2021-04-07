@@ -4,12 +4,17 @@
   "version": "1.0.0",
   "license": "MIT",
   "keywords": [
-    "minecraft",
-    "server",
-    "launcher"
+    "Electron",
+    "Minecraft",
+    "MinecraftServerLauncher",
+    "MinecraftServerManager",
+    "MinecraftServerPanel"
   ],
   "author": "阿友",
-  "repository": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marklin0531/minecraft-server-launcher"
+  },
   "scripts": {
     "start": "node app.js",
     "start-electron": "electron .",

@@ -96,7 +96,6 @@ Temporary Items
 .idea
 app/db
 app/images/version-原圖
-build/
 public/
 sh/
 test/
