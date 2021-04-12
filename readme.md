@@ -14,27 +14,27 @@
 ## 畫面擷圖
 
 ### 啟動畫面
-![splash-1.png](./screenshot/splash-1.png)<br />
-![splash-2.png](./screenshot/splash-2.png)<br />
-![splash-3.png](./screenshot/splash-3.png)<br />
+![splash-1.jpeg](screenshot/splash-1.jpeg)<br />
+![splash-2.jpeg](screenshot/splash-2.jpeg)<br />
+![splash-3.jpeg](screenshot/splash-3.jpeg)<br />
 
 ### 主畫面
-![mainWin.png](./screenshot/mainWin.png)<br />
+![mainWin.jpeg](screenshot/mainWin.jpeg)<br />
 
 ### 伺服器新增
-![server-add.png](./screenshot/server-add.png)<br />
+![server-add.jpeg](screenshot/server-add.jpeg)<br />
 
 ### 主畫面-伺服器清單
-![mainWin-2.png](./screenshot/mainWin-2.png)<br />
+![mainWin-2.jpeg](screenshot/mainWin-2.jpeg)<br />
 
 ### 伺服器地圖目錄
-![server-map-folder-add.png](./screenshot/server-map-folder-add-500.jpeg)<br />
+![server-map-folder-add.jpeg](screenshot/server-map-folder-add-500.jpeg)<br />
 
 ### 伺服器-進階啟動
-![server-start-log.png](./screenshot/server-start-log.png)<br />
+![server-start-log.jpeg](screenshot/server-start-log.jpeg)<br />
 
 ### 偏好設定
-![preference.png](./screenshot/preference-400.jpeg)<br />
+![preference.jpeg](screenshot/preference-400.jpeg)<br />
 
 
 ### 移除軟體
