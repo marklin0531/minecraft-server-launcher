@@ -28,13 +28,13 @@
 ![mainWin-2.jpeg](screenshot/mainWin-2.jpeg)<br />
 
 ### 伺服器地圖目錄
-![server-map-folder-add.jpeg](screenshot/server-map-folder-add-500.jpeg)<br />
+![server-map-folder-add.jpeg](screenshot/server-map-folder-add.jpeg)<br />
 
 ### 伺服器-進階啟動
 ![server-start-log.jpeg](screenshot/server-start-log.jpeg)<br />
 
 ### 偏好設定
-![preference.jpeg](screenshot/preference-400.jpeg)<br />
+![preference.jpeg](screenshot/preference.jpeg)<br />
 
 
 ### 移除軟體
