@@ -6,7 +6,7 @@
  */
 const consoleTitle = '[/app/common/mydb.js]';
 const mySqlite = require('../common/mySqlite');    //Sqlite3 DB模組
-const {is} = require('electron-util');
+const {is} = require('electron-util');  //相關好用的函式庫
 const path = require('path');
 
 
@@ -43,7 +43,7 @@ class MyDB {
         }
 
         //console.log(consoleTitle2, '__dirname:', __dirname);  // xxx/app/common
-        //console.log(consoleTitle2, 'this.dbPath:', this.dbPath);
+        console.log(consoleTitle2, 'dbPath:', this.dbPath);
 
     }
 
@@ -77,99 +77,179 @@ class MyDB {
         await this.db.close();  //關閉DB連線
     }
 
-
     /**
-     * 取當前版本 - 設定值資料
-     *
-     * @return {Promise<*>}
+     * Table: 好友記錄檔
      */
-    async getSetting() {
+    get tableSchema_friends() {
 
-        let consoleTitle2 = consoleTitle + '[getSetting]';
+        let schema_100 = `-- 好友ID
+                          friend_id  INTEGER PRIMARY KEY AUTOINCREMENT,
 
-        let sql = `Select * From setting Where dbVersion = ?`;
-        //console.log(consoleTitle2, 'sql:', sql, this.appVersion);
+                          -- 英文帳號 
+                          account    VARCHAR(50),
 
-        let data = await this.db.get(sql, [this.appVersion]);
+                          -- 名稱
+                          name       VARCHAR(50),
 
-        return data;
+                          created_at DATETIME DEFAULT CURRENT_TIMESTAMP`;
+
+        return schema_100;
 
     }
 
     /**
-     * DB migration 檢查 -
-     *
-     * @return {Promise<void>}
+     * Table: 偏好設定檔
      */
-    async migrationCheck() {
+    get tableSchema_setting() {
 
-        let consoleTitle2 = consoleTitle + '[migrationCheck]';
-        console.log(consoleTitle2);
+        let schema_100 = `setting_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                          -- 資料庫版本
+                          dbVersion  VARCHAR(10),
+                          created_at DATETIME DEFAULT CURRENT_TIMESTAMP`;
 
+        let schema_101 = `setting_id             INTEGER PRIMARY KEY AUTOINCREMENT,
 
-        //PS: 先建資料表 - createTable()
-        await this.createTable();
+                          -- AP版本
+                          version                VARCHAR(10),
 
+                          -- 當前使用的顯示語系,預設中文
+                          locale                 VARCHAR(20) DEFAULT 'zh-TW',
 
-        //PS: 檢查是否有此 app 版本的設定資料
-        let setting = await this.getSetting();
-        if (setting) {
-            //有 this.appVersion
+                          -- 進階伺服器啟動: true=顯示伺服器LOG
+                          isAdvance_Server_Start VARCHAR(5)  DEFAULT 'false',
 
-        } else {
-            //setting 無此版本
+                          created_at             DATETIME    DEFAULT CURRENT_TIMESTAMP`;
 
-            //執行 - migration
-            await this.migration();
-
-        }
+        return schema_101;
 
     }
 
     /**
-     * DB 升級 -
-     *
-     * @return {Promise<void>}
+     * Table: 伺服器記錄檔
      */
-    async migration() {
+    get tableSchema_server() {
 
-        let consoleTitle2 = consoleTitle + '[migration]';
-        console.log(consoleTitle2);
+        let schema_100 = `-- 伺服器ID
+                          server_id            INTEGER PRIMARY KEY AUTOINCREMENT,
 
-        //PS: Alter Table
-        switch (this.appVersion) {
-            case '1.0.0':
+                          -- 伺服器介紹
+                          motd                 VARCHAR(150),
 
-                // let msql = `ALTER TABLE setting ADD COLUMN SEX char(1);`;
-                // await this.db.run(msql, []);
+                          -- 伺服器版本
+                          version              VARCHAR(50),
 
-                break;
+                          -- 伺服器連接埠
+                          server_port          VARCHAR(10)  DEFAULT '25565',
 
-            case '1.0.1':
+                          -- 地圖的目錄
+                          level_name           VARCHAR(50),
 
-                break;
+                          -- OP管理者
+                          ops                  TEXT         DEFAULT NULL,
 
-            default:
-                break;
-        }
+                          -- 地圖種子碼
+                          level_seed           VARCHAR(100) DEFAULT NULL,
 
+                          -- 開啟正版驗證
+                          online_mode          INTEGER      DEFAULT 0,
 
-        //PS: 清除 setting.dbVersion
-        let sqld = `Delete From setting;`
-        console.log(consoleTitle2, 'sqld:', sqld);
-        await this.db.run(sqld, []);
+                          -- 遊戲模式
+                          gamemode             INTEGER      DEFAULT 0,
 
-        //PS: 記錄 Insert setting.dbVersion
-        let sqli = `Insert into setting (dbVersion) values (?);`
-        console.log(consoleTitle2, 'sqli:', sqli);
-        await this.db.run(sqli, [this.appVersion]);
+                          -- 地圖生成模式
+                          level_type           VARCHAR(10)  DEFAULT 'DEFAULT',
+
+                          -- 遊戲人數
+                          max_players          INTEGER      DEFAULT 10,
+
+                          -- 地獄傳送門
+                          allow_nether         INTEGER      DEFAULT 1,
+
+                          -- 開啟玩家打玩家
+                          pvp                  INTEGER      DEFAULT 1,
+
+                          -- 開啟飛行
+                          allow_flight         INTEGER      DEFAULT 1,
+
+                          -- 難度設定
+                          difficulty           INTEGER      DEFAULT 0,
+
+                          -- 啟用命令塊
+                          enable_command_block INTEGER      DEFAULT 0,
+
+                          -- 是否出現怪物
+                          spawn_monsters       INTEGER      DEFAULT 0,
+
+                          -- 生成村莊、遺跡、廢棄礦坑
+                          generate_structures  INTEGER      DEFAULT 0,
+
+                          created_at           DATETIME     DEFAULT CURRENT_TIMESTAMP`;
+
+        let schema_101 = `-- 伺服器ID
+                          server_id              INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                          -- 伺服器介紹
+                          motd                   VARCHAR(150),
+
+                          -- 伺服器版本
+                          version                VARCHAR(50),
+
+                          -- 伺服器連接埠
+                          server_port            VARCHAR(10)  DEFAULT '25565',
+
+                          -- 地圖的目錄
+                          level_name             VARCHAR(50),
+
+                          -- OP管理者
+                          ops                    TEXT         DEFAULT NULL,
+
+                          -- 地圖種子碼
+                          level_seed             VARCHAR(100) DEFAULT NULL,
+
+                          -- 開啟正版驗證
+                          online_mode            VARCHAR(5)   DEFAULT 'false',
+
+                          -- 遊戲模式
+                          gamemode               VARCHAR(5)   DEFAULT 'false',
+
+                          -- 地圖生成模式
+                          level_type             VARCHAR(10)  DEFAULT 'DEFAULT',
+
+                          -- 遊戲人數
+                          max_players            INTEGER      DEFAULT 10,
+
+                          -- 地獄傳送門
+                          allow_nether           VARCHAR(5)   DEFAULT 'true',
+
+                          -- 開啟玩家打玩家
+                          pvp                    VARCHAR(5)   DEFAULT 'true',
+
+                          -- 開啟飛行
+                          allow_flight           VARCHAR(5)   DEFAULT 'true',
+
+                          -- 難度設定
+                          difficulty             VARCHAR(5)   DEFAULT 'false',
+
+                          -- 啟用命令塊
+                          enable_command_block   VARCHAR(5)   DEFAULT 'false',
+
+                          -- 是否出現怪物
+                          spawn_monsters         VARCHAR(5)   DEFAULT 'false',
+
+                          -- 生成村莊、遺跡、廢棄礦坑
+                          generate_structures    VARCHAR(5)   DEFAULT 'false',
+
+                          -- 開啟防噴 (伺服器指令) - v1.0.1
+                          gamerule_keepInventory VARCHAR(5)   DEFAULT 'false',
+
+                          created_at             DATETIME     DEFAULT CURRENT_TIMESTAMP`;
+
+        return schema_101;
 
     }
 
-
     /**
-     * 建立資料表: 伺服器清單
-     * PS： 請勿再新增欄位，要新增欄位請改用 migration 執行 alert table
+     * 建立資料表: 伺服器清單 - ok
      */
     async createTable() {
 
@@ -178,95 +258,177 @@ class MyDB {
 
         await this.open();  //開啟資料庫連線
 
-        //PS: 設定檔
-        let sqlCreateTable_Setting = `CREATE TABLE IF NOT EXISTS setting
-                                      (
-                                          setting_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                          -- 資料庫版本
-                                          dbVersion  VARCHAR(10),
-                                          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                                      )`;
-        await this.db.run(sqlCreateTable_Setting);
 
+        //PS: 設定檔
+        let sqlCreateTable_Setting_new = `CREATE TABLE IF NOT EXISTS setting (${this.tableSchema_setting})`;
+        await this.db.run(sqlCreateTable_Setting_new);
 
         //PS: MC伺服器設定值
-        let sqlCreateTable_Server = `CREATE TABLE IF NOT EXISTS server
-                                     (
-                                         -- 伺服器ID
-                                         server_id            INTEGER PRIMARY KEY AUTOINCREMENT,
-
-                                         -- 伺服器介紹
-                                         motd                 VARCHAR(150),
-
-                                         -- 伺服器版本
-                                         version              VARCHAR(50),
-
-                                         -- 伺服器連接埠
-                                         server_port          VARCHAR(10)  DEFAULT '25565',
-
-                                         -- 地圖的目錄
-                                         level_name           VARCHAR(50),
-
-                                         -- OP管理者
-                                         ops                  TEXT         DEFAULT NULL,
-
-                                         -- 地圖種子碼
-                                         level_seed           VARCHAR(100) DEFAULT NULL,
-
-                                         -- 開啟正版驗證
-                                         online_mode          INTEGER      DEFAULT 0,
-
-                                         -- 遊戲模式
-                                         gamemode             INTEGER      DEFAULT 0,
-
-                                         -- 地圖生成模式
-                                         level_type           VARCHAR(10)  DEFAULT 'DEFAULT',
-
-                                         -- 遊戲人數
-                                         max_players          INTEGER      DEFAULT 10,
-
-                                         -- 地獄傳送門
-                                         allow_nether         INTEGER      DEFAULT 1,
-
-                                         -- 開啟玩家打玩家
-                                         pvp                  INTEGER      DEFAULT 1,
-
-                                         -- 開啟飛行
-                                         allow_flight         INTEGER      DEFAULT 1,
-
-                                         -- 難度設定
-                                         difficulty           INTEGER      DEFAULT 0,
-
-                                         -- 啟用命令塊
-                                         enable_command_block INTEGER      DEFAULT 0,
-
-                                         -- 是否出現怪物
-                                         spawn_monsters       INTEGER      DEFAULT 0,
-
-                                         -- 生成村莊、遺跡、廢棄礦坑
-                                         generate_structures  INTEGER      DEFAULT 0,
-
-                                         created_at           DATETIME     DEFAULT CURRENT_TIMESTAMP
-                                     )`;
-        await this.db.run(sqlCreateTable_Server);
-
+        let sqlCreateTable_Server_new = `CREATE TABLE IF NOT EXISTS server (${this.tableSchema_server})`;
+        await this.db.run(sqlCreateTable_Server_new);
 
         //PS: 好友名單
-        let sqlCreateTable_Friends = `CREATE TABLE IF NOT EXISTS friends
-                                      (
-                                          -- 好友ID
-                                          friend_id  INTEGER PRIMARY KEY AUTOINCREMENT,
+        let sqlCreateTable_Friends_new = `CREATE TABLE IF NOT EXISTS friends (${this.tableSchema_friends})`;
+        await this.db.run(sqlCreateTable_Friends_new);
 
-                                          -- 英文帳號 
-                                          account    VARCHAR(50),
+    }
 
-                                          -- 名稱
-                                          name       VARCHAR(50),
+    /**
+     * DB 升級 -
+     *
+     * PS: 記得升級完後要異動 setting.version 的版號為當前版本
+     *
+     * @return {Promise<void>}
+     */
+    async migration() {
 
-                                          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                                      )`;
-        await this.db.run(sqlCreateTable_Friends);
+        let consoleTitle2 = consoleTitle + '[migration]';
 
+        //PS: 取當前 APP 的版本,對前一個版本做migration
+        switch (this.appVersion) {
+            case '1.0.0':  //初始版本
+                //setting - 只有 dbVersion 欄位
+                let sql1 = `insert into setting (dbVersion) values ('1.0.0')`;
+                await this.db.exec(sql1, []);  //一次執行多條SQL
+                break;
+
+            case '1.0.1':
+                //升級 1.0.0 的 DB
+
+                //===
+                try {
+
+                    console.log(consoleTitle2, '升級資料表: server => 更新欄位型態、新增 [gamerule_keepInventory]');
+
+                    //PS: 保留上一版的欄位資料
+                    let fields = `motd, version, server_port, level_name, ops, level_seed, online_mode,
+                    gamemode, level_type, max_players, allow_nether, pvp, allow_flight,
+                    difficulty, enable_command_block, spawn_monsters, generate_structures`;
+
+                    let sqlg = [
+                        `drop table if exists server_dg_tmp;`,
+                        `create table server_dg_tmp (${this.tableSchema_server});`,
+                        `insert into server_dg_tmp (${fields}) Select ${fields} From server;`,
+                        `drop table server;`,
+                        `alter table server_dg_tmp rename to server;`
+                    ];
+                    await this.db.exec(sqlg.join('\n'), []);  //一次執行多條SQL
+
+                } catch (e) {
+                    console.error(consoleTitle2, e.message);
+                }
+                //===
+
+                //PS: 必需留在最後面做異動
+                try {
+
+                    console.log(consoleTitle2, '升級資料表: setting => dbVersion 更名為 version，新增欄位: locale、isAdvance_Server_Start');
+
+                    let sqlg = [
+                        `drop table if exists setting_dg_tmp;`,
+                        `create table setting_dg_tmp (${this.tableSchema_setting});`,
+                        `insert into setting_dg_tmp (version) values ('${this.appVersion}');`,
+                        `drop table setting;`,
+                        `alter table setting_dg_tmp rename to setting;`
+                    ];
+                    await this.db.exec(sqlg.join('\n'), []);  //一次執行多條SQL
+
+                } catch (e) {
+                    console.error(consoleTitle2, e.message);
+                }
+
+                break;
+
+            default:
+
+                console.log(consoleTitle2, '無升級資料表');
+
+                //PS: 沒有更新DB的都只做 setting.version 更新, migrationCheck() 才不會每次啟動時都做更新.
+                let sqlu = `Update setting Set version = ?`;
+                await this.db.run(sqlu, [this.appVersion]);
+
+                break;
+        }
+
+    }
+
+
+    /**
+     * DB migration 檢查 - ok
+     *
+     * @return {Promise<void>}
+     */
+    async migrationCheck() {
+
+        let consoleTitle2 = consoleTitle + '[migrationCheck]';
+        console.log(consoleTitle2, `app Version: ${this.appVersion}`);
+
+
+        //PS: 先建資料表 - createTable()
+        await this.createTable();
+
+
+        //PS: 檢查是否有此 app 新版本的設定資料
+        let setting = await this.getSetting();
+        if (setting) {
+            //有 this.appVersion, 不做更新
+            console.log(consoleTitle2, '無需升級DB');
+        } else {
+            //setting 無此版本
+
+            //執行 - migration
+            await this.migration();
+        }
+
+    }
+
+
+    /**
+     * 取當前版本 - 設定值資料 - ok
+     *
+     * @return {Promise<*>}
+     *
+     * call: migrationCheck()
+     * call: /app/config.js => initLocale()
+     * call: /app/form_preference.html
+     */
+    async getSetting() {
+
+        let consoleTitle2 = consoleTitle + '[getSetting]';
+
+        try {
+            let sql = `Select *
+                       From setting
+                       Where version = ?`;
+            //console.log(consoleTitle2, 'sql:', sql, this.appVersion);
+            let data = await this.db.get(sql, [this.appVersion]);  //取最新版本
+            console.log(consoleTitle2, data);
+
+            global.Setting = data;   //PS: 共用
+
+            return data;
+
+        } catch (e) {
+            console.error(consoleTitle2, e.message);
+            return null;
+        }
+
+    }
+
+
+    /**
+     * 改變語系設定 - ok
+     *
+     * @param locale    語系: en, zh-tw
+     *
+     * @return {Promise<void>}
+     */
+    async setLocale(locale) {
+        let consoleTitle2 = consoleTitle + '[setLocale]';
+        let sql = `Update setting
+                   Set locale = ?
+                   Where version = ?`;
+        await this.db.run(sql, [locale, this.appVersion]);
     }
 
 

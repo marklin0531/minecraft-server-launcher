@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>minecraft伺服器 - 偏好設定</title>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';"/>
+    <link href="./css/bootstrap-v5.min.css" rel="stylesheet">
+    <script src="./css/bootstrap.bundle.min.js"></script>
+    <link href="./css/public.css" rel="stylesheet">
+</head>
+<body>
+<div style="padding-bottom: 10px;"></div>
+<div class="alert alert-danger" id="notice" style="display: none;"><span></span></div>
+<div class="container pb-2">
+    <div class="col-sm-12">
+
+        <script id="template1" type="x-tmpl-mustache">
+            <form class="row1 gg-3 needs-validation " novalidate action="javascript:void(0);" id="frm1">
+
+            <div class="card">
+                <div class="card-body">
+                    <!-- start -->
+
+                    <div class="mb-3">
+                        <label for="locale" class="form-label">* {{field.Language}}:</label>
+                        <select class="form-select is-valid2" id="locale">
+                        </select>
+                        <span style="color:red;">(需重新啟動軟體才能生效)</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="locale" class="form-label">* {{field.Advance_Server_Start}}:</label>
+                        <input class="form-check-input" type="radio" name="isAdvance_Server_Start" id="isAdvance_Server_Start_1" value="false" checked>
+                        <label class="form-check-label" for="isAdvance_Server_Start_1">
+                            一般
+                        </label>
+                        <input class="form-check-input" type="radio" name="isAdvance_Server_Start" id="isAdvance_Server_Start_2" value="true">
+                        <label class="form-check-label" for="isAdvance_Server_Start_2">
+                            進階
+                        </label>
+                    </div>
+
+                    <!-- end -->
+                </div>
+            </div>
+
+            <div class="mb-3">
+            </div>
+
+            <div class="mb-3 text-center">
+                <button type="button" class="btn btn-primary col-3" onclick="btn_save();">儲存</button>
+                <button type="button" class="btn btn-dark col-3" onclick="btn_close();">關閉</button>
+            </div>
+        </form>
+
+
+
+
+
+        </script>
+
+        <div class="row" id="container1">
+            <!-- template1 Render HTML Here -->
+        </div>
+
+    </div>
+</div>
+
+<div style="padding-bottom: 10px;"></div>
+
+</body>
+</html>
+
+<script>
+    let consoleTitle = '[/form_server.html]';
+    const path = require('path');
+    const {remote, ipcRenderer} = require('electron');
+    const {app, dialog} = remote;
+
+    //PS: 攔截錯誤送給 main process
+    window.onerror = function (error, url, line) {
+        ipcRenderer.send('errorInWindow', error, url, line);
+    };
+
+    const {locales} = remote.require('./config');  //取 [支援的語系] 清單: Array
+    let i18n = remote.getGlobal('i18n');           //多國語系轉換
+
+    const Mustache = require('mustache');  //樣版引擎 https://github.com/janl/mustache.js
+    const myElectron = remote.require('./common/myElectron');
+    const mydb = remote.getGlobal('MyDB');  //資料庫模組
+
+    //....................................................................................
+    /**
+     * 接收主進程(index.js)的訊息
+     */
+
+    //載入伺服器資料到表單 - ok
+    //call: app/index.js => ipcMain.on('openwin_form_preference')
+    ipcRenderer.on('load', async (event, param1) => {
+
+        //console.log(consoleTitle, '[ipcRenderer][load2] param1:', param1);
+        await load();
+
+    });
+
+    //PS: 讀取資料
+    let load = async () => {
+
+        let consoleTitle2 = consoleTitle + '[load]';
+
+        let settingData = await mydb.getSetting();  //取出 setting 資料
+        console.log(consoleTitle2, 'settingData:', settingData);
+
+        //---------
+        //PS: 輸出HTML
+        var template1 = document.getElementById('template1').innerHTML;
+        var rendered1 = Mustache.render(template1, {
+            field: {
+                Language: i18n.__('Preference.Language'),
+                Advance_Server_Start: i18n.__('Preference.Advance Server Start')
+            }
+            //list: serverList
+        });
+        document.getElementById('container1').innerHTML = rendered1;  //Render後的html放入Container
+        //---------
+
+        //產生語系下拉清單 - ok
+        let select = document.getElementById("locale");
+        locales.forEach((item, idx) => {
+            console.log(consoleTitle, 'idx:', idx, ',item:', item, i18n.__(`Locales.${item}`));
+            let option = document.createElement("option");
+            option.text = i18n.__(`Locales.${item}`);
+            option.value = item;
+
+            if (settingData.locale === item) option.selected = 'selected';
+            //if (idx === 0) option.selected = 'selected';
+
+            select.appendChild(option);
+        });
+
+        //---------
+        //填入值
+        setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="isAdvance_Server_Start"]'), settingData.isAdvance_Server_Start);
+
+        //---------
+
+    }
+    //....................................................................................
+    /**
+     * 儲存 - ok
+     */
+    let btn_save = async () => {
+
+        let consoleTitle2 = consoleTitle + '[btn_save]';
+
+        let form = document.getElementById('frm1');  //Form Element
+        if (!form.checkValidity()) {
+            //console.log(consoleTitle2, 'form invalid');
+        } else {
+            //console.log(consoleTitle2, 'form valid');
+
+            //PS: 取表單欄位資料
+            let locale = document.getElementById('locale').value;
+            let isAdvance_Server_Start = document.querySelector('input[name="isAdvance_Server_Start"]:checked').value;
+
+            //修改
+            let sqlu = `Update setting
+                        Set locale                 = ?,
+                            isAdvance_Server_Start = ?
+                        Where version = ?`;
+
+            let sqluParams = [
+                locale, isAdvance_Server_Start,
+                app.getVersion()];
+            console.log(consoleTitle2, sqlu, '\n', sqluParams);
+            await mydb.db.run(sqlu, sqluParams);
+
+            //PS: 重新讀取
+            await mydb.getSetting();
+
+            let _msg = `儲存完成。`
+            myElectron.showDialogMessage('儲存', _msg);
+
+
+            //關閉視窗
+            btn_close();
+
+        }
+
+        form.classList.add('was-validated');  //bootstrap5 顯示UI的驗證訊息
+
+    }
+
+    /**
+     * 關閉視窗 - ok
+     */
+    let btn_close = () => {
+
+        //ipcRenderer.send('ipcMain_RenderList', {s: 'btn_close', data: {}});   //PS: 傳遞給 [主進程]
+
+        remote.getCurrentWindow().close();  //關閉自己
+
+    }
+
+    //....................................................................................
+    /**
+     * Radio Checked
+     *
+     * @param {html input type=radio} vRadioObj
+     * @param {the radiobutton with this value will be checked} vValue
+     */
+    function setCheckedValueOfRadioButtonGroup(vRadioObj, vValue) {
+        var radios = document.getElementsByName(vRadioObj.name);
+        for (var j = 0; j < radios.length; j++) {
+            if (radios[j].value === vValue + '') {
+                radios[j].checked = true;
+                break;
+            }
+        }
+    }
+
+</script>

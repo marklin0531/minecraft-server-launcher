@@ -1,0 +1,5 @@
+body {
+    user-select: none;  /*禁止用滑鼠圈選頁面上的文字，圖片...等內容*/
+    background-color: white;
+    margin: 0;
+}

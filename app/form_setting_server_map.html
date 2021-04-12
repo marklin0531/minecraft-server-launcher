@@ -6,12 +6,8 @@
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';"/>
     <link href="./css/bootstrap-v5.min.css" rel="stylesheet">
     <script src="./css/bootstrap.bundle.min.js"></script>
+    <link href="./css/public.css" rel="stylesheet">
     <style>
-        body {
-            user-select: none; /*禁止用户用鼠标在页面上选中文字、图片等，也就是，让页面内容不可选。也可以只允许用户选中文字，或者全部都放开*/
-            background-color: white;
-            margin: 0;
-        }
         table {
             margin-bottom: 0 !important;
         }
@@ -52,7 +48,7 @@
                   <input type="radio" class="btn btn-lg" id="{{folder}}" name="level_name" value="{{folder}}" onclick="btn_select_map_folder('{{folder}}',{{_id}})" {{#selected}}checked{{/selected}}>
               </th>
               <td>
-                 <label for="{{folder}}">{{folder}}</label>
+                 <label for="{{folder}}" style="cursor:pointer;">{{folder}}</label>
               </td>
               <td colspan="2">
                  {{#removeable}}
@@ -62,7 +58,7 @@
                     <button type="button" class="btn btn-sm btn-warning col-3" onclick="btn_clear_map_folder('{{folder}}')">清空</button>
                  {{/clearable}}
                  <button type="button" class="btn btn-sm btn-primary col-3" onclick="btn_open_map_folder('{{folder}}');">開啟</button>
-                 <button type="button" class="btn btn-sm btn-primary col-3" onclick="btn_open_map_folder('{{folder}}');">安裝</button>
+                 <!--<button type="button" class="btn btn-sm btn-primary col-3" onclick="btn_open_map_folder('{{folder}}');">安裝</button>-->
               </td>
             </tr>
           {{/worldFolders}}

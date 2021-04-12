@@ -4,16 +4,17 @@
  * 2021-03-29 友
  */
 const consoleTitle = '[/app/common/myMCServerManager.js]';
-const {is} = require('electron-util');
-const getPort = require('get-port');  //https://github.com/sindresorhus/get-port
-const myMCLauncher = require('./myMCLauncher');             //啟動器
-const myProgressBar = require('../common/myProgressBar');   //進度條
 const electron = require('electron');
 const {app} = electron;
+const {is} = require('electron-util');
+const getPort = require('get-port');  //取可使用的埠號 - https://github.com/sindresorhus/get-port
 const fs = require('fs');
 const path = require('path');
 const rimraf = require('rimraf');
 const mkdirp = require('mkdirp');
+const myMCLauncher = require('./myMCLauncher');             //啟動器
+const myProgressBar = require('../common/myProgressBar');   //進度條
+
 
 const isInt = (value) => {
     return !isNaN(value) && (function (x) {
@@ -434,7 +435,7 @@ class myMCServerManager {
 
         let consoleTitle2 = consoleTitle + `[${this.server_id}][getServerData]`;
 
-        console.log(consoleTitle2, `db 取伺服器設定資料`);
+        console.log(consoleTitle2, `DB - 取伺服器設定資料`);
         let serverData = await global.MyDB.getServer(this.server_id);
 
         //PS: 增加 [MC伺服器目錄] 到屬性內
@@ -513,7 +514,7 @@ class myMCServerManager {
 
         //PS: 取 db 的 單一伺服器設定資料 (MC伺服器設定值)
         let serverData = await this.getServerData();
-        console.log(consoleTitle2, `初始化MC伺服器啟動器實例 => serverData:`, serverData);
+        console.log(consoleTitle2, `初始化-MC伺服器啟動器實例 => serverData:`, serverData);
 
         //PS: * 初始化伺服器啟動器實例 並 儲存實例 - ok
         return this.serverLaunchers[this.serverKey] = new myMCLauncher(serverData);  //放入Global共用變數
@@ -536,10 +537,14 @@ class myMCServerManager {
         //PS: 是否已有 單一伺服器啟動器實例
         let _serverLauncher = this.getServerLauncher();
         //console.log(consoleTitle2, `是否已有單一伺服器啟動器實例: _serverLauncher:`, _serverLauncher);
-        if (_serverLauncher) return _serverLauncher;
+
+        if (_serverLauncher) {
+            console.log(consoleTitle2, `伺服器啟動器實例-已存在`);
+            return _serverLauncher;  //PS： 回傳現有實例
+        }
 
         //PS: 第一次建立 伺服器啟動器實例
-        console.log(consoleTitle2, `建立伺服器啟動器實例`);
+        console.log(consoleTitle2, `建立-伺服器啟動器實例`);
         _serverLauncher = await this._initLauncher();    //初始化伺服器啟動器實例
 
         console.log(consoleTitle2, `=============== end`);

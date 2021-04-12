@@ -7,37 +7,27 @@
  * 2021-03-25 友
  */
 const consoleTitle = '[/app/index.js]';
-const {app, BrowserWindow, Menu, ipcMain} = require('electron');
-const {is} = require('electron-util');    //https://github.com/sindresorhus/electron-util
+const {app, BrowserWindow, ipcMain} = require('electron');
 const enums = require('./common/enums');
 const mySecurity = require('./common/mySecurity');
-const MyDB = require('./common/mydb');                            //初始化資料庫
-const myMachineResource = require('./common/myMachineResource');  //取主機資源
 const myMCServerManager = require('./common/myMCServerManager');  //MC伺服器管理
-
-//PS: 以Github當升級來源-範本: https://github.com/iffy/electron-updater-example
-const {autoUpdater} = require('electron-updater');
-require('./common/autoUpdater');
-
 //....................................................................................
-//主視窗設定參數
-const width = 1280;
-const height = 720;
-let winMain = null;   //主進程視窗
-
-//是否顯示開發者工具
-let isShowDevTools = {
-    winMain: false,      //主視窗
-    menu: false,         //選單
-    form_Server: false,  //表單-新增/修改 MC伺服器
-    form_Map: false,     //表單-新增/修改 MC伺服器地圖
-    form_Log: false      //表單-顯示 MC伺服器Log
-}
-// isShowDevTools.winMain = true;
-// isShowDevTools.menu = true;
-// isShowDevTools.form_Server = true;
-// isShowDevTools.form_Map = true;
-// isShowDevTools.form_Log = true;
+const {
+    width,
+    height,
+    regLocale,
+    regAutoUpdater,
+    regMenu,
+    getPreference,
+    migrationDB,
+    getMachineResource,
+    initDB,
+    initLocale,
+    isDev,
+    isShowDevTools,
+    locales
+} = require('./config');   //設定檔
+regLocale();  //(一次性) 註冊-多國語系
 
 //....................................................................................
 //region APP 監聽
@@ -48,18 +38,21 @@ let isShowDevTools = {
 app.on('window-all-closed', () => {
     console.log(consoleTitle, '[app] window-all-closed');
     if (process.platform !== 'darwin') {
-        app.quit()
+        app.quit();  //before-quit event will be emitted first
     }
 })
 
 /**
  * 重新啟動時觸發
  */
-app.on('activate', () => {
+app.on('activate', async () => {
     console.log(consoleTitle, '[app] activate');
+
+    //PS: 程式內的寫法需注意如果有 [註冊事件] ,在重啟時是否會重覆註冊的情況.
+
     if (BrowserWindow.getAllWindows().length === 0) {
-        //createWindow()
-        createMain();
+        await init();        //初始化 Splash, DB, Resource...
+        await createMain();  //初始化主視窗
     }
 })
 
@@ -96,7 +89,78 @@ process.on("unhandledRejection", (e) => {
 
 //....................................................................................
 //region 渲染進程呼叫主進程
-//....................................................................................
+
+//偏好設定
+ipcMain.on('openwin_form_preference', async (event, params) => {
+
+    let consoleTitle2 = consoleTitle + '[ipcMain.on][openwin_form_preference]';
+    console.log(consoleTitle2, 'params:', params);
+    //....................................................................................
+    //PS: 建立視窗
+    let childWin = new BrowserWindow({
+        backgroundColor: '#ffffff',  //背景色
+        width: 500,
+        height: 340,
+        resizable: false,
+        minimizable: false,
+        maximizable: false,
+        //alwaysOnTop: true,  //將視窗顯示在最上層 (PS: 不可設否則 Win10 Explorer會被蓋在下面)
+        parent: winMain,    //父層
+        //modal: true,        //Modal模式
+        webPreferences: {
+            //devTools: false,   //關閉開發工具
+            contextIsolation: false,
+            nodeIntegration: true,
+            enableRemoteModule: true   //開啟 Renderer 可以使用 remote 方法
+        }
+    });
+
+    childWin.setMenu(null);    //隱藏選單
+    if (isShowDevTools.form_Server) childWin.openDevTools();   //開啟 DevTools (Mac - Alt+Command+I)
+
+    //....................................................................................
+    //region 註冊事件
+    /**
+     * 攔截html的視窗標題異動
+     */
+    childWin.on('page-title-updated', function (e) {
+        let constTitle3 = consoleTitle2 + '[childWin.on][page-title-updated]';
+        //console.log(constTitle3);
+        e.preventDefault()
+    });
+    childWin.setTitle(`${i18n.__('Menu.Preference')}`);  //變更視窗標題
+
+    /**
+     * 一個框架中的文字載入完成後觸發該事件
+     */
+    childWin.webContents.on('did-finish-load', (evt) => {
+
+        let consoleTitle3 = consoleTitle2 + '[childWin.on][渲染][did-finish-load]';
+
+        //PS: 傳遞訊息給 Renderer
+        childWin.webContents.send('load', {});
+
+    });
+
+    //視窗關閉
+    childWin.on('closed', () => {
+
+        let constTitle3 = consoleTitle2 + '[childWin.on][closed]';
+
+        childWin = null;
+        console.log(constTitle3, 'childWin');
+
+    })
+    //endregion
+    //....................................................................................
+    //PS: 載入主頁面
+    const url = `file://${__dirname}/form_preference.html`;
+    await childWin.loadURL(url);
+    console.log(consoleTitle2, 'done');
+
+})
+
+
 //呼叫 /index.html 重新載入 [伺服器清單] 資料
 let RenderList = (params) => {
 
@@ -144,46 +208,75 @@ ipcMain.on('server_stats', async (event, param1) => {
 
 });
 
-
-//啟動MC伺服器 - ok
+//啟動MC伺服器 - 一般/進階 - ok
 ipcMain.on('server_start', async (event, param1) => {
 
     let server_id = param1.server_id;
 
+    let preference = await getPreference();   //設定檔 - 取 [偏好設定]
+    let isAdvance_Server_Start = preference.isAdvance_Server_Start;  //進階啟動
+
     let consoleTitle2 = consoleTitle + `[ipcMain][server_start][${server_id}]`;
     console.log(consoleTitle2, 'param1:', param1);
+    console.log(consoleTitle2, 'preference:', preference);
 
     let mcServerManager = new myMCServerManager(server_id);   //建立伺服器管理實例
-    mcServerManager.progressBarText.show('啟動伺服器中...');
+    let mcServerLauncher = await mcServerManager.server();   //取單一伺服器 MCLauncher instance實例
 
-    let _mcServerLauncher = await mcServerManager.server();   //PS: 取單一伺服器啟動器實例
-    console.log(consoleTitle2, '_mcServerLauncher:', _mcServerLauncher);
+    //PS: 取 db 的 單一伺服器設定資料 (MC伺服器設定值)
+    let serverOptions = mcServerLauncher.options;
+    let gamerule_keepInventory = serverOptions.gamerule_keepInventory; //開啟防噴
+    //console.log(consoleTitle2, `MC伺服器 => serverOptions:`, serverOptions);
 
-    let _msg = `成功啟動了伺服器`;
+    //PS： 進階啟動
+    if (isAdvance_Server_Start === 'true') {
 
-    let _doEnd = async () => {
-        mcServerManager.progressBarText.show(_msg);
-        setTimeout(() => mcServerManager.progressBarText.hide(), 1500);
+        //PS: OPEN MC LOG
+        ipcMain.emit('openwin_view_server_log', event, {server_id});
 
-        //PS: 重新載入清單
-        await RenderList(param1);
-    }
+    } else {  //一般啟動
 
-    if (!_mcServerLauncher.isRunning) {
-        setTimeout(async () => {
+        mcServerManager.progressBarText.show('啟動伺服器中...');
 
-            //PS: Launcher啟動伺服器
-            _mcServerLauncher.start(async function (err) {
-                if (err) {
-                    console.log(consoleTitle2, err);
-                    mcServerManager.progressBarText.show(`啟動伺服器失敗`);
-                }
-                await _doEnd();
-            });
+        let _mcServerLauncher = await mcServerManager.server();   //PS: 取單一伺服器啟動器實例
+        console.log(consoleTitle2, '_mcServerLauncher:', _mcServerLauncher);
 
-        }, 500);
-    } else {
-        await _doEnd();
+        let _msg = `成功啟動了伺服器`;
+
+        let _doEnd = async () => {
+            mcServerManager.progressBarText.show(_msg);
+            setTimeout(() => mcServerManager.progressBarText.hide(), 1500);
+
+            //PS: 重新載入清單
+            await RenderList(param1);
+        }
+
+        if (!_mcServerLauncher.isRunning) {
+            setTimeout(async () => {
+
+                //PS: Launcher啟動伺服器
+                _mcServerLauncher.start(async function (err) {
+                    if (err) {
+                        console.log(consoleTitle2, err);
+                        mcServerManager.progressBarText.show(`啟動伺服器失敗`);
+                    } else {
+
+                        //PS: 下指令給伺服器
+                        //mcServerLauncher.Server.writeServer('/help' + '\n');
+                        //mcServerLauncher.Server.writeServer('/list' + '\n');
+                        if (gamerule_keepInventory === 'true') {
+                            mcServerLauncher.Server.writeServer('/gamerule keepInventory true' + '\n');   //死亡後保留物品欄
+                        }
+
+                    }
+                    await _doEnd();
+                });
+
+            }, 500);
+        } else {
+            await _doEnd();
+        }
+
     }
 
 });
@@ -456,6 +549,7 @@ ipcMain.on('openwin_setting_server_map', async (event, param1) => {
 ipcMain.on('openwin_view_server_log', async (event, param1) => {
 
     let consoleTitle2 = consoleTitle + '[ipcMain][openwin_view_server_log]';
+    //console.log(consoleTitle2, 'event:', event);
     console.log(consoleTitle2, 'param1:', param1);
 
     let server_id = param1.server_id;  //伺服器
@@ -467,9 +561,9 @@ ipcMain.on('openwin_view_server_log', async (event, param1) => {
     //PS: 建立視窗
     let childWin = new BrowserWindow({
         backgroundColor: '#ffffff',  //背景色
-        width: 500,
-        height: height,
-        resizable: false,
+        width: 800,
+        height: 400,
+        resizable: true,
         minimizable: false,
         maximizable: false,
         //alwaysOnTop: true,  //將視窗顯示在最上層 (PS: 不可設否則 Win10 Explorer會被蓋在下面)
@@ -482,7 +576,6 @@ ipcMain.on('openwin_view_server_log', async (event, param1) => {
             enableRemoteModule: true   //開啟 Renderer 可以使用 remote 方法
         }
     });
-
     childWin.setMenu(null);    //隱藏選單
     if (isShowDevTools.form_Log) childWin.openDevTools();   //開啟 DevTools (Mac - Alt+Command+I)
 
@@ -496,7 +589,7 @@ ipcMain.on('openwin_view_server_log', async (event, param1) => {
         //console.log(constTitle3);
         e.preventDefault()
     });
-    childWin.setTitle(`${enums.project.title} - ${isNew ? '新增' : '修改'}伺服器LOG`);  //變更視窗標題
+    childWin.setTitle(`Console logs`);  //變更視窗標題
 
     /**
      * 一個框架中的文字載入完成後觸發該事件
@@ -533,111 +626,9 @@ ipcMain.on('openwin_view_server_log', async (event, param1) => {
 //endregion
 
 //....................................................................................
-//region 初始化
-
-/**
- * 初始化 資料庫 - ok
- */
-let initDBSetting = async () => {
-
-    let consoleTitle2 = consoleTitle + '[initDBSetting]';
-
-    console.log(consoleTitle2, '開啟資料庫連線');
-    const mydb = new MyDB(app);  //初始化
-    await mydb.open();              //開啟資料庫連線
-    await mydb.migrationCheck();    //DB migration 檢查
-
-    return mydb;
-
-}
-
-/**
- * 初始化 選單
- */
-let initMenu = () => {
-
-    let consoleTitle2 = consoleTitle + '[initMenu]';
-    //console.log(consoleTitle2);
-
-    const isMac = process.platform === 'darwin';
-
-    /**
-     * 註冊鍵盤快捷鍵
-     * 其中：label: '切換開發者工具',這個可以在釋出時註釋掉
-     */
-    let submenu_devtool = {
-        label: '切換開發者工具',
-        visible: isShowDevTools.menu,  //是否顯示
-        accelerator: (function () {
-            if (process.platform === 'darwin') {
-                return 'Alt+Command+I'
-            } else {
-                return 'Ctrl+Shift+I'
-            }
-        })(),
-        click: function (item, focusedWindow) {
-            if (focusedWindow) {
-                focusedWindow.toggleDevTools()
-            }
-        }
-    }
-
-    let submenu_autoUpdate = {
-        label: '檢查更新',
-        click: function (item, focusedWindow) {
-            autoUpdater.checkForUpdates();
-        }
-    }
-
-    let template = [
-        // { role: 'appMenu' }
-        ...(isMac ? [{
-            label: '選單',
-            submenu: [
-                {role: 'about', label: '關於'},
-                //submenu_autoUpdate,
-                {type: 'separator'},
-                {role: 'services'},
-                submenu_devtool,
-                {type: 'separator'},
-                {role: 'quit', label: '離開'}
-            ]
-        }] : [{
-            label: '選單',
-            submenu: [
-                {role: 'about', label: '關於'},
-                //submenu_autoUpdate,
-                submenu_devtool,
-                {type: 'separator'},
-                {role: 'quit', label: '結束'}
-            ]
-        }])
-    ];
-
-    //if (!global.isDev) {
-    const menu = Menu.buildFromTemplate(template)
-    Menu.setApplicationMenu(menu) // 設定選單部分
-    //}
-
-}
-
-//endregion
-
-//....................................................................................
-//region TODO: 自動升級
-
-// autoUpdater.on('download-progress', function (progressObj) {
-//     winMain.setProgressBar(progressObj.percent.toFixed(2) / 100);
-//     winMain.setTitle('已下载：' + progressObj.percent.toFixed(2) + '%')
-// });
-
-//autoUpdater.checkForUpdates();
-
-//....................................................................................
 //region Loading 視窗
 
 let winSplash = null;
-
 const splash = async () => {
 
     let consoleTitle2 = consoleTitle + '[splash]';
@@ -698,12 +689,12 @@ const splash = async () => {
 
 //....................................................................................
 //region 主視窗
+
+let winMain = null;   //主進程視窗
 const createMain = async () => {
 
-    let constTitle2 = consoleTitle + '[createMain]';
-
-    //PS: 啟動畫面
-    await splash();
+    let consoleTitle2 = consoleTitle + '[createMain]';
+    console.log(consoleTitle2);
 
     //....................................................................................
     //PS: 建立視窗
@@ -721,6 +712,7 @@ const createMain = async () => {
             enableRemoteModule: true   //開啟 Renderer 可以使用 remote 方法
         }
     });
+    //winMain.setMenu(null);    //隱藏選單 (macOS 不會消失，win10會消失)
     if (isShowDevTools.winMain) winMain.openDevTools();  //開啟 DevTools (Mac - Alt+Command+I)
 
     //....................................................................................
@@ -729,7 +721,7 @@ const createMain = async () => {
      * 攔截html的視窗標題異動
      */
     winMain.on('page-title-updated', function (e) {
-        let constTitle3 = consoleTitle + '[winMain.on][page-title-updated]';
+        let constTitle3 = consoleTitle2 + '[winMain.on][page-title-updated]';
         e.preventDefault();
     });
     winMain.setTitle(`${enums.project.title}`);  //變更視窗標題
@@ -737,7 +729,7 @@ const createMain = async () => {
     //視窗關閉
     winMain.on('closed', () => {
 
-        let constTitle3 = consoleTitle + '[winMain.on][closed]';
+        let constTitle3 = consoleTitle2 + '[winMain.on][closed]';
 
         //關閉所有子視窗
         for (let window of BrowserWindow.getAllWindows()) {
@@ -751,31 +743,41 @@ const createMain = async () => {
         //console.log(constTitle3, 'winMain');
 
     })
-
     //endregion
-
-    //....................................................................................
-    /**
-     * 初始化 / 共用變數 - (TODO: 改在 splash 執行)
-     */
-    global.MyDB = await initDBSetting();  //建立資料表,Demo Account, DB物件放入共用區
-    global.isDev = is.development;                //開發與正式環境偵測
-    global.machineResource = await myMachineResource.getMachineResource();  //取主機資源
-
     //....................................................................................
     //PS: 載入主頁面
     const url = `file://${__dirname}/index.html`;
-    //console.log(constTitle2, 'winMain 載入:', url);
+    //console.log(consoleTitle2, 'winMain 載入:', url);
     await winMain.loadURL(url);
 
     //....................................................................................
-    initMenu();          //初始化選單
-    winMain.show();      //主視窗
-    winSplash.close();   //啟動畫面 結束
+    winMain.show();          //主視窗
+    winSplash.close();       //啟動畫面 結束
 
 }
 //endregion
 
-app.whenReady().then(createMain);  //建立主視窗
+//初始化 (可重覆載入)
+let init = async () => {
+
+    await splash();              //PS: 啟動畫面
+    await initDB(app);           //建立資料表, Migration, Setting讀取
+    await migrationDB();         //資料庫升級檢查
+    await initLocale();          //初始化 語系,載入使用者選擇的語系
+    await getMachineResource();  //取主機資源: Public Ip, Private Ip, MemoryInfo, CpuInfo
+    regMenu();                   //註冊選單
+
+}
+
+app.whenReady().then(async () => {
+
+        //PS: APP activate 重新啟動時也會呼叫
+        await init();        //初始化 Splash, DB, Resource...
+        await createMain();  //初始化主視窗
+
+        regAutoUpdater(winMain); //(一次性) 初始化自動更新
+
+    }
+);  //建立主視窗
 
 //....................................................................................

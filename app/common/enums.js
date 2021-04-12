@@ -16,7 +16,7 @@ module.exports = {
         /**
          * 標題
          */
-        title: `${pkg.description} - v${pkg.version}`
+        title: `${pkg.name.replace(/-/g,' ')} - v${pkg.version}`
     }
 
 }

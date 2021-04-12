@@ -6,14 +6,7 @@
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';"/>
     <link href="./css/bootstrap-v5.min.css" rel="stylesheet">
     <link rel="stylesheet" href="./css/bootstrap-icons.css">
-    <style>
-        body {
-            user-select: none; /*禁止用户用鼠标在页面上选中文字、图片等，也就是，让页面内容不可选。也可以只允许用户选中文字，或者全部都放开*/
-            background-color: white;
-            margin: 0;
-            /*background-image: url("images/background/mine.jpg");*/
-        }
-    </style>
+    <link href="./css/public.css" rel="stylesheet">
 </head>
 <body>
 
@@ -25,7 +18,8 @@
         <div class="col-sm-6">
             <div class="d-grid gap-1 d-flex justify-content-end">
 <!--                <a href="javascript:void(0);" class="btn btn-info" onclick="RenderList();">重新載入伺服器清單</a>-->
-                <button type="button" class="btn btn-warning" onclick="btn_server_create();">下載地圖</button>
+<!--                <button type="button" class="btn btn-warning" onclick="RenderList();">切換語系</button>-->
+<!--                <button type="button" class="btn btn-warning" onclick="btn_server_create();">下載地圖</button>-->
                 <button type="button" class="btn btn-warning" onclick="btn_server_create();">新增伺服器</button>
             </div>
         </div>
@@ -57,9 +51,9 @@
                        <!--<button id="btnServerStop{{server_id}}" class="btn btn-danger" type="button" onclick="btn_server_stats('{{server_id}}');">
                           資源
                        </button>-->
-                       <button id="btnServerStop{{server_id}}" class="btn btn-danger" type="button" onclick="btn_server_restart('{{server_id}}');">
+                       <!--<button id="btnServerStop{{server_id}}" class="btn btn-danger" type="button" onclick="btn_server_restart('{{server_id}}');">
                           重啟
-                       </button>
+                       </button>-->
                        <button id="btnServerStop{{server_id}}" class="btn btn-danger" type="button" onclick="btn_server_stop('{{server_id}}');">
                           停止
                        </button>
@@ -102,9 +96,12 @@
         ipcRenderer.send('errorInWindow', error, url, line);
     };
 
+    let i18n = remote.getGlobal('i18n');  //多國語系轉換
+    //console.log('i18n:', i18n);
+    //console.log('Hello:', i18n.__('Hello'), i18n.__('Marge'));
+
     const myElectron = remote.require('./common/myElectron');
     const Mustache = require('mustache');  //樣版引擎 https://github.com/janl/mustache.js
-    const enums = require('./common/enums');
     const mydb = remote.getGlobal('MyDB');  //資料庫模組
     const machineResource = remote.getGlobal('machineResource');  //取主機資源
     const myMCServerManager = remote.require('./common/myMCServerManager');   //MC伺服器管理
@@ -123,14 +120,15 @@
 
         let canStartServerTotal = Math.floor((machineResource.memInfo.freeMemMb-300) / 1024);
 
-        let msg = `根據電腦資源推算，建議最多啟動 ${canStartServerTotal}台伺服器`;
+        //let msg = `根據電腦資源推算，建議最多啟動 ${canStartServerTotal}台伺服器`;
+        let msg = i18n.__('predictionCanStartServerTotal %d', canStartServerTotal);
         if (canStartServerTotal < 1) {
-            msg = `電腦資源不足，不建議啟動伺服器，以免當機`;
+            //msg = `電腦資源不足，不建議啟動伺服器，以免當機`;
+            msg = i18n.__('predictionCanStartServerTotal_low');
         }
 
         document.getElementById('predictionCanStartServerTotal').innerHTML = msg;
     }
-    predictionCanStartServerTotal();
 
     //....................................................................................
     /**
@@ -149,6 +147,10 @@
 
         let consoleTitle2 = consoleTitle + '[RenderList]';
         console.log(consoleTitle2);
+
+        //console.log(consoleTitle2, 'i18n目前語系:', i18n.getLocale());
+
+        predictionCanStartServerTotal();  //粗估推算主機資源可啟動的伺服器數目
 
         //---------
         //PS: 取伺服器設定資料的清單

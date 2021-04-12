@@ -1,0 +1,39 @@
+{
+	"Hello": "您好",
+	"Marge": "阿友",
+	"Author": "作者",
+	"Version": "版本",
+	"Locales": {
+		"en-US": "英文",
+		"zh-TW": "繁體中文",
+		"zh-CN": "簡體中文"
+	},
+	"Preference": {
+		"Language": "語言",
+		"Advance Server Start": "進階伺服器啟動"
+	},
+	"Menu": {
+		"Main Menu": "主選單",
+		"About": "關於",
+		"Check for Updates": "檢查更新",
+		"Preference": "偏好設定",
+		"Quit": "離開",
+		"English": "英文",
+		"Chinese": "繁體中文"
+	},
+	"predictionCanStartServerTotal %d": "根據電腦資源推算，建議最多啟動 %d台伺服器",
+	"predictionCanStartServerTotal_low": "電腦資源不足，不建議啟動伺服器，以免當機",
+	"Start": "啟動",
+	"Stop": "停止",
+	"SetMap": "地圖",
+	"SetServer": "伺服器",
+	"Copy %s To Clipboard": "已將 %s 複制到剪貼簿囉",
+	"Run": "執行",
+	"Notice": "提示",
+	"autoUpdater": {
+		"Disconnected Cannot Check for Updates": "網路未連線，無法進行檢查更新",
+		"Checking for Updates": "檢查更新中",
+		"Update not available": "暫無更新",
+		"Update available": "新版本提醒"
+	}
+}

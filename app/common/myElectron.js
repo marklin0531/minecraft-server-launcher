@@ -23,7 +23,7 @@ const {Notification, dialog, screen, shell, clipboard} = require('electron');
  *
  * @param text
  */
-let copyTextToClipboard = function(text) {
+let copyTextToClipboard = function (text) {
 
     clipboard.writeText(text);
 
@@ -32,6 +32,17 @@ let copyTextToClipboard = function(text) {
 //endregion
 
 //region Shell
+
+/**
+ * shell - Browser 開啟網址
+ *
+ * @param url
+ * @return {Promise<void>}
+ */
+let shellOpenExternal = async (url) => {
+    await shell.openExternal(url);
+}
+
 
 /**
  * shell - 將 目錄/檔案 丟到垃圾桶 - ok

@@ -6,13 +6,7 @@
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';"/>
     <link href="./css/bootstrap-v5.min.css" rel="stylesheet">
     <script src="./css/bootstrap.bundle.min.js"></script>
-    <style>
-        body {
-            user-select: none;  /*禁止用户用鼠标在页面上选中文字、图片等，也就是，让页面内容不可选。也可以只允许用户选中文字，或者全部都放开*/
-            background-color: white;
-            margin: 0;
-        }
-    </style>
+    <link href="./css/public.css" rel="stylesheet">
 </head>
 <body>
 <div style="padding-bottom: 10px;"></div>
@@ -57,8 +51,8 @@
 <!--                        </select>-->
 <!--                    </div>-->
                     <div class="mb-3">
-                        <label for="ops" class="form-label">OP管理者:</label>
-                        <input type="text" class="form-control is-invalid2" id="ops" value="jamie0324,roy0111">
+                        <label for="ops" class="form-label">OP管理者: (逗號分隔多人，例: marge,jamie)</label>
+                        <input type="text" class="form-control is-invalid2" id="ops" value="" placeholder="marge,jamie">
                         <div class="invalid-feedback">
                         </div>
                     </div>
@@ -233,26 +227,36 @@
                         <div class="invalid-feedback">
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label for="" class="form-label">* 開啟防噴:</label>
-
-                        <input class="form-check-input" type="radio" name="gamerule_xxx"
-                               id="ggamerule_xxx_1" value="true" checked>
-                        <label class="form-check-label" for="ggamerule_xxx_1">
-                            開啟
-                        </label>
-                        <input class="form-check-input" type="radio" name="gamerule_xxx"
-                               id="gamerule_xxx_2" value="false">
-                        <label class="form-check-label" for="gamerule_xxx_2">
-                            關閉
-                        </label>
-                    </div>
                     <!-- end -->
                 </div>
             </div>
 
             <div class="mb-3">
             </div>
+
+            <div class="card">
+                <div class="card-header">伺 服 器 指 令</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="" class="form-label">* 開啟防噴:</label>
+
+                        <input class="form-check-input" type="radio" name="gamerule_keepInventory"
+                               id="gamerule_keepInventory_1" value="true" checked>
+                        <label class="form-check-label" for="gamerule_keepInventory_1">
+                            開啟
+                        </label>
+                        <input class="form-check-input" type="radio" name="gamerule_keepInventory"
+                               id="gamerule_keepInventory_2" value="false">
+                        <label class="form-check-label" for="gamerule_keepInventory_2">
+                            關閉
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+            </div>
+
             <div class="mb-3 text-center">
                 <button id="btnDestoryServer" type="button" class="btn btn-danger" onclick="btn_destroy_server();">
                     移除伺服器
@@ -272,7 +276,7 @@
 <script>
     let consoleTitle = '[/form_server.html]';
     const path = require('path');
-    const {remote, ipcRenderer} = require('electron');
+    const {remote, ipcRenderer, clipboard} = require('electron');
     const {app, dialog} = remote;
 
     //PS: 攔截錯誤送給 main process
@@ -280,10 +284,29 @@
         ipcRenderer.send('errorInWindow', error, url, line);
     };
 
+    const keyCodes = {
+        V: 86,
+    }
+
+    //PS: input 欄位只能做到貼上的功能
+    // document.onkeydown = function(event){
+    //     let toReturn = true
+    //     if(event.ctrlKey || event.metaKey){  // detect ctrl or cmd
+    //         if(event.which === keyCodes.V){
+    //             document.activeElement.value += clipboard.readText()
+    //             document.activeElement.dispatchEvent(new Event('input'))
+    //             toReturn = false
+    //         }
+    //     }
+    //     return toReturn
+    // }
+
     const enums = remote.require('./common/enums');
     const myElectron = remote.require('./common/myElectron');
     const mydb = remote.getGlobal('MyDB');  //資料庫模組
     const myMCServerManager = remote.require('./common/myMCServerManager');   //MC伺服器管理
+
+    let form = document.getElementById('frm1');  //Form Element
 
     //....................................................................................
     /**
@@ -333,9 +356,9 @@
      *
      * call: ipcRenderer.on('load')
      */
-    let SERVER_ID = null;    //修改
-    let SERVER_DATA = null;  //伺服器設定資料
-    let mcServerManager = null;
+    let SERVER_ID = null;          //伺服器ID
+    let SERVER_DATA = null;        //伺服器設定資料
+    let mcServerManager = null;    //建立伺服器管理實例
     let SERVER_ISRUNNING = false;  //true=已啟動, false=已停止
 
     let load_server = async (server_id) => {
@@ -381,6 +404,9 @@
                 setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="spawn_monsters"]'), server.spawn_monsters);
                 setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="generate_structures"]'), server.generate_structures);
 
+                //
+                setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="gamerule_keepInventory"]'), server.gamerule_keepInventory);
+
             }
 
             //PS: Disabled 不可修改的項目
@@ -409,32 +435,11 @@
 
 
     /**
-     * Radio Checked
-     *
-     * @param {html input type=radio} vRadioObj
-     * @param {the radiobutton with this value will be checked} vValue
-     */
-    function setCheckedValueOfRadioButtonGroup(vRadioObj, vValue) {
-        var radios = document.getElementsByName(vRadioObj.name);
-        for (var j = 0; j < radios.length; j++) {
-            if (radios[j].value === vValue + '') {
-                radios[j].checked = true;
-                break;
-            }
-        }
-    }
-
-    //....................................................................................
-    //Form Element
-    let form = document.getElementById('frm1');
-
-    /**
      * 儲存 - ok
      */
     let btn_save = async () => {
 
         let consoleTitle2 = consoleTitle + '[btn_save]';
-        //console.log(consoleTitle2, 'form:', form);
 
         if (!form.checkValidity()) {
             //console.log(consoleTitle2, 'form invalid');
@@ -461,6 +466,7 @@
             let enable_command_block = document.querySelector('input[name="enable_command_block"]:checked').value;
             let spawn_monsters = document.querySelector('input[name="spawn_monsters"]:checked').value;
             let generate_structures = document.querySelector('input[name="generate_structures"]:checked').value;
+            let gamerule_keepInventory = document.querySelector('input[name="gamerule_keepInventory"]:checked').value;
 
 
             //PS: 驗證motd只能有英數字
@@ -500,19 +506,20 @@
                                 enable_command_block = ?,
                                 spawn_monsters       = ?,
                                 generate_structures  = ?,
-                                max_players          = ?
+                                max_players          = ?,
+                                gamerule_keepInventory = ?
                             Where server_id = ?`;
 
                 let sqluParams = [motd, version, server_port, level_name,
                     ops, level_seed, online_mode, gamemode, level_type,
                     allow_nether, pvp, difficulty, enable_command_block,
                     spawn_monsters, generate_structures, max_players,
+                    gamerule_keepInventory,
                     SERVER_ID];
                 await mydb.db.run(sqlu, sqluParams);
 
 
                 //PS: 覆寫 server.properties, ops.json
-                //let mcServerManager = new myMCServerManager(SERVER_ID);  //建立伺服器管理實例
                 await mcServerManager.resetLauncherOptions();  //PS: 更新 Launcher 的 [MC伺服器設定值],server.properties, ops.txt
 
                 let _msg = `更新完成${SERVER_ISRUNNING ? '，設定將在伺服器重啟後生效':''}。`
@@ -520,26 +527,28 @@
 
             } else {
 
+                //新增伺服器
                 let mcServerManager = new myMCServerManager(SERVER_ID);  //建立伺服器管理實例
-                server_port = await mcServerManager.getAvailableServerPort();
+                server_port = await mcServerManager.getAvailableServerPort();  //PS： 取可使用的 PORT
 
                 //新增
                 let sqli = `Insert into server (motd, version, server_port, level_name,
                                                 ops, level_seed, online_mode, gamemode, level_type,
                                                 allow_nether, pvp, difficulty, enable_command_block, spawn_monsters,
-                                                generate_structures, max_players)
+                                                generate_structures, max_players, gamerule_keepInventory)
                             values (?, ?, ?, ?,
                                     ?, ?, ?, ?, ?,
                                     ?, ?, ?, ?, ?,
-                                    ?, ?)`;
+                                    ?, ?, ?)`;
                 let sqliParams = [
                     motd, version, server_port, level_name,
                     ops, level_seed, online_mode, gamemode, level_type,
                     allow_nether, pvp, difficulty, enable_command_block, spawn_monsters,
-                    generate_structures, max_players
+                    generate_structures, max_players, gamerule_keepInventory
                 ];
                 await mydb.db.run(sqli, sqliParams);
 
+                //TODO: 寫入 ops.txt
 
                 myElectron.showDialogMessage('儲存', '新增完成。');
 
@@ -555,6 +564,22 @@
     }
 
 
+    /**
+     * Radio Checked
+     *
+     * @param {html input type=radio} vRadioObj
+     * @param {the radiobutton with this value will be checked} vValue
+     */
+    function setCheckedValueOfRadioButtonGroup(vRadioObj, vValue) {
+        var radios = document.getElementsByName(vRadioObj.name);
+        for (var j = 0; j < radios.length; j++) {
+            if (radios[j].value === vValue + '') {
+                radios[j].checked = true;
+                break;
+            }
+        }
+    }
+    //....................................................................................
     //BUTTON: 移除伺服器 - ok
     let btn_destroy_server = async () => {
 

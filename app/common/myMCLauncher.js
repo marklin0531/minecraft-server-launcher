@@ -8,7 +8,7 @@ const wrap = require('minecraft-wrap');    //v1.3.0
 const path = require('path');
 const fs = require('fs');
 const pidusage = require('pidusage');  //https://www.npmjs.com/package/pidusage
-const byteSize = require('byte-size');
+const byteSize = require('byte-size'); //bytes 轉 MB
 
 
 class myMCLauncher {
@@ -201,7 +201,7 @@ class myMCLauncher {
         let self = this;
         let _Server = this.Server;
 
-        //輸出 伺服器 log
+        //監聽: 輸出 伺服器 log
         _Server.on('line', function (line) {
             console.log(consoleTitle2, 'log:', line);
         });
@@ -223,10 +223,10 @@ class myMCLauncher {
 
                 self.isRunning = true;  //伺服器啟動
 
-                //PS: 測試下命令
-                // https://github.com/mononz/Minecraft-NodeJS
+                //PS: 下指令給伺服器 - https://github.com/mononz/Minecraft-NodeJS
                 //_Server.writeServer('/help' + '\n');
-                _Server.writeServer('/list' + '\n');
+                //_Server.writeServer('/list' + '\n');
+                //_Server.writeServer('/gamerule keepInventory true' + '\n');   //死亡後保留物品欄
 
             }
 
@@ -249,8 +249,10 @@ class myMCLauncher {
         let consoleTitle2 = this.consoleTitle + '[stop]';
 
         let self = this;
+        let _Server = this.Server;
+        _Server.removeAllListeners();  //PS：移除全部監聽 - http://nodejs.cn/api/events.html#events_emitter_removelistener_eventname_listener
 
-        this.Server.stopServer(function (err) {
+        _Server.stopServer(function (err) {
 
             if (err) {
                 console.log(consoleTitle2, err);

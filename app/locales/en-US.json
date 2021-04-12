@@ -1,0 +1,38 @@
+{
+	"Locales": {
+		"en-US": "English",
+		"zh-TW": "Chinese(Traditional)",
+		"zh-CN": "Chinese(Simplified)"
+	},
+	"Hello": "Hello",
+	"Marge": "Marge",
+	"Author": "Author",
+	"Version": "Version",
+	"Language": "Language",
+	"Menu": {
+		"Main Menu": "Main Menu",
+		"About": "About",
+		"Check for Updates": "Check for Updates",
+		"Preference": "Preference",
+		"Quit": "Quit",
+		"English": "English",
+		"Chinese": "Chinnese"
+	},
+	"predictionCanStartServerTotal %d": "According Computer Resource，Recommend Max Start %d Server",
+	"predictionCanStartServerTotal_low": "Computer Resource Not Enough to Start any Server",
+	"Start": "Start",
+	"Stop": "Stop",
+	"SetMap": "Maps",
+	"SetServer": "Servers",
+	"Copy %s To Clipboard": "Copy %s To Clipboard",
+	"Run": "Run",
+	"Notice": "Notice",
+	"autoUpdater": {
+		"Disconnected Cannot Check for Updates": "Disconnected Cannot Check for Updates",
+		"Checking for Updates": "Checking for Updates",
+		"Update not available": "Update not available",
+		"Update available": "Update available"
+	},
+	"en-US": "en-US",
+	"zh-TW": "zh-TW"
+}
