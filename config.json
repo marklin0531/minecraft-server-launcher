@@ -1,0 +1,49 @@
+{
+    "date": "2021-04-18T02:09:28.000Z",
+    "latest": "1.1.0",
+    "news": [
+        {
+            "title": "新訊息",
+            "info": "content",
+            "date": "2021-04-17"
+        }
+    ],
+    "versions": [
+        {
+            "s": "Vanilla",
+            "v": "1.16.5"
+        },
+        {
+            "s": "Vanilla",
+            "v": "1.16.4"
+        },
+        {
+            "s": "Vanilla",
+            "v": "1.14.2"
+        },
+        {
+            "s": "Vanilla",
+            "v": "1.13.2"
+        },
+        {
+            "s": "Vanilla",
+            "v": "1.12.2"
+        }
+    ],
+    "maps": [
+        {
+            "title": "麥塊空島生存",
+            "info": "從一塊泥土開局的麥塊空島生存《OneBlock》\n\n",
+            "author": "IJAMinecraft",
+            "url": "https://tedliou.com/archives/minecraft-oneblock/",
+            "download": "https://ijaminecraft.com/download/map/oneblock/IJAMinecrafts-OneBlock-1-16-4.zip",
+            "date": "2021-04-07",
+            "server": "Vanilla",
+            "version": [
+                "1.16.4",
+                "1.15.2",
+                "1.13.2"
+            ]
+        }
+    ]
+}

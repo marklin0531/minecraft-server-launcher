@@ -1,19 +1,27 @@
 const consoleTitle = '[/app/config.js]';
 const {app, BrowserWindow, Menu, ipcMain, ipcRenderer} = require('electron');
 const path = require('path');
-const I18n = require('i18n-2');      //https://www.npmjs.com/package/i18n
-const {is} = require('electron-util');    //相關好用的函式庫 https://github.com/sindresorhus/electron-util
-const {autoUpdater} = require('electron-updater');  //PS: 以Github當升級來源-範本: https://github.com/iffy/electron-updater-example
-const myAutoUpdater = require('./common/myAutoUpdater');   //檢測升級檔
-const myMachineResource = require('./common/myMachineResource');  //取主機資源
-const MyDB = require('./common/mydb');  //初始化資料庫
+const fs = require('fs');
+const I18n = require('i18n-2');                            //https://www.npmjs.com/package/i18n
+const {is} = require('electron-util');                     //相關好用的函式庫 https://github.com/sindresorhus/electron-util
+const {autoUpdater} = require('electron-updater');         //PS: 以Github當升級來源-範本: https://github.com/iffy/electron-updater-example
+const myAutoUpdater = require('./myAutoUpdater');          //檢測升級檔
+const myMachineResource = require('./myMachineResource');  //取主機資源
+const MyDB = require('./myDb');                            //初始化資料庫
+const myDate = require('./myDate');                        //時間函式
 const openAboutWindow = require('about-window').default;   //自訂 [關於]
-const pkg = require('../package.json');
+const pkg = require('../../package.json');                 //package
+const isOnline = require('is-online');                     //網路連線狀態: https://www.npmjs.com/package/is-online
+const fetch = require('electron-fetch').default;           //https://www.npmjs.com/package/electron-fetch
+const appVersion = app.getVersion();                       //當前使用的版本
+const apiurl = pkg.apiurl;                                 //線上訊息API
 
 
 //region 主視窗設定參數
 const width = 1280;
 const height = 720;
+
+const isEnableDevTools = true;  //是否可啟用開發者工具
 
 //是否顯示開發者工具
 let isShowDevTools = {
@@ -21,15 +29,135 @@ let isShowDevTools = {
     menu: false,         //選單
     form_Server: false,  //表單-新增/修改 MC伺服器
     form_Map: false,     //表單-新增/修改 MC伺服器地圖
-    form_Log: false      //表單-顯示 MC伺服器Log
+    form_Log: false,     //表單-顯示 MC伺服器Log
+    form_Friends: false  //表單-好友管理
 }
 // isShowDevTools.winMain = true;
 // isShowDevTools.menu = true;
 // isShowDevTools.form_Server = true;
 // isShowDevTools.form_Map = true;
 // isShowDevTools.form_Log = true;
+// isShowDevTools.form_Friends = true;
 
 //endregion
+
+
+/**
+ * 檢測網路是否連線
+ *
+ * @return {Promise<*>}
+ */
+let isNetworkOnline = async () => {
+    let _isOnline = await isOnline({timeout: 3000});
+    global.isNetworkOnline = _isOnline;  //放入全域
+    return _isOnline;  //true or false
+}
+
+/**
+ * 比較版號 是否 新版本 > 當前版本
+ *
+ * @param newVer      新版本
+ * @param oldVer      當前版本
+ * @return {boolean}  true=有新版本
+ *
+ * call: loadOnlineConfig()
+ */
+let versionCompare = (newVer, oldVer) => {
+
+    let newVer2 = newVer.split('.').map((item) => item.padStart(2, '0')).join('.');
+    let oldVer2 = oldVer.split('.').map((item) => item.padStart(2, '0')).join('.');
+
+    let isNewVer = newVer2 > oldVer2;
+    //console.log(newVer2, '>', oldVer2, '=', newVer2 > oldVer2);
+
+    return isNewVer;
+
+}
+
+/**
+ * 讀取線上設定檔
+ */
+let loadOnlineConfig = async () => {
+
+    let consoleTitle2 = consoleTitle + '[loadOnlineConfig]';
+    let sdate = new Date();
+
+    //------------
+    //PS: 下載線上的設定檔
+    let configUrl = `${apiurl}/config.json?t=${myDate.timestamp()}`;
+    let configFile = `config.json`;   //設定檔檔名
+    let configFilePath = null;        //設定檔存放路徑
+    let configDefaultFilePath = path.join(`${app.getAppPath()}`, `${configFile}`);  //AP目錄下的檔案路徑
+
+    //PS: 開發環境
+    if (is.development) {
+        configFilePath = path.join(`${app.getAppPath()}`, `${configFile}`);  //AP目錄下的檔案路徑
+    } else {
+        const userDataPath = app.getPath('userData');  //PS：使用個人目錄來放存
+        configFilePath = path.join(`${userDataPath}`, `${configFile}`);     //檔案路徑
+    }
+    console.log(consoleTitle2, 'configFilePath:', configFilePath);
+
+    //------------
+    let localConfig = null;  //預設檔內容
+
+    //PS: 判斷是否存在本機的 userData 目錄下的 config.json (預設是不會有此檔案，需由下方下載後才有)
+    let isExistConfigFile = fs.existsSync(configFilePath);
+    if (!isExistConfigFile) {  //不存在
+        localConfig = fs.readFileSync(configDefaultFilePath, {encoding:'utf-8'}); //改讀取 AP目錄下的檔案路徑
+    } else {
+        localConfig = fs.readFileSync(configFilePath, {encoding:'utf-8'});
+    }
+    //------------
+    //PS: 讀取預設檔
+    //console.log(consoleTitle2, 'localConfig:', localConfig);
+    localConfig = JSON.parse(localConfig);
+    localConfig.thisAppVersion = appVersion;     //當前使用的版本
+    localConfig.isNewVer = false;                //true=有新版本
+    localConfig.downloadUrl = pkg.downloadurl;   //下載的頁面
+    global.config = localConfig;   //放入全域
+
+    //------------
+    //PS: 網路連線中
+    if (await isNetworkOnline()) {
+
+        fetch(configUrl)
+            .then(res => res.json())
+            .then(json => {
+
+                //console.log(consoleTitle2, json);
+                //PS: Save to /config.json
+                fs.writeFile(configFilePath, JSON.stringify(json, null, 4), function (err) {
+                    if (err) {
+                        throw err;
+                    }
+                    console.log(consoleTitle2, 'Saved! =>', configFilePath);
+
+                    let spendSecTimes = myDate.calculatorRunTimes(sdate).milliseconds;  //計算花費秒數
+                    console.log(consoleTitle2, '=== End', new Date(), ` => 花費: ${spendSecTimes} 毫秒`);
+
+                    //PS: 寫入全域變數
+                    let isNewVer = versionCompare(json.latest, appVersion);  //比對版號是否有新版本
+                    json.thisAppVersion = appVersion;     //當前使用的版本
+                    json.isNewVer = isNewVer;             //true=有新版本
+                    json.downloadUrl = pkg.downloadurl;   //下載的頁面
+                    global.config = json;   //放入全域
+
+                    //console.log(consoleTitle2, 'global.config:', global.config);
+
+                });
+
+            })
+            .catch(err => {
+                console.error(consoleTitle2, err);
+            })
+
+    } else {
+        console.log(consoleTitle2, '網路未連線,無法下載 config.json =>', configUrl);
+    }
+
+}
+
 
 /**
  * 支援的多國語系
@@ -37,6 +165,7 @@ let isShowDevTools = {
  * zh-TW: 繁體
  */
 let locales = ['zh-TW'];
+global.locales = locales;
 
 
 /**
@@ -199,7 +328,7 @@ let regMenu = async () => {
                 }
             ]
         }] : [{
-            label: i18n.__('Menu.Main Menu'),
+            label: i18n.__('Menu.Main'),
             submenu: [
                 submenu_about,
                 submenu_preference,
@@ -228,12 +357,44 @@ module.exports = {
 
     width,
     height,
+
+    appVersion,
+    isNetworkOnline,
+    loadOnlineConfig,
+
+    /**
+     * AP 程式目錄
+     *
+     * call: /app/common/ipcManOpenWindows.js
+     */
+    appFolderPath: () => {
+        return path.join(app.getAppPath(), 'app');  //eg: /Users/marge/minecraft/ServerLauncher + '/' + app
+    },
+
+    isEnableDevTools,
     isShowDevTools,
 
     isDev: () => {
-
         global.isDev = is.development;          //開發與正式環境偵測
         return global.isDev;
+    },
+
+    /**
+     * 找尋系統內是否有安裝 java
+     */
+    find_java_home: () => {
+
+        let consoleTitle2 = consoleTitle + '[find_java_home]';
+
+        require('find-java-home')((err, java_home) => {
+            if (err) {
+                global.isFindJavaHome = false;
+                console.error(consoleTitle2, 'find-java-home => err:', err);
+            } else {
+                global.isFindJavaHome = true;
+                console.log(consoleTitle2, 'java_home:', java_home);
+            }
+        });
 
     },
 
@@ -256,7 +417,7 @@ module.exports = {
         });
 
         global.i18n = i18n;
-        //console.log(consoleTitle2, 'global.i18n:', global.i18n);
+        console.log(consoleTitle2, 'global.i18n:', global.i18n);
 
         //let locale = i18n.getLocale()  //取當前語系
         //i18n.setLocale('zh-TW')     //切換語系-繁體
@@ -333,12 +494,13 @@ module.exports = {
     /**
      * 註冊 自動更新
      *
-     * @param winMain    主視窗
      * @return {Promise<void>}
      */
-    regAutoUpdater: async (winMain) => {
+    regAutoUpdater: async () => {
 
-        myAutoUpdater(winMain);  //初始化自動更新
+        let winMain = global.winMain;   //改讀取全域變數
+
+        myAutoUpdater();  //初始化自動更新
 
         /**
          * 顯示下載進度
@@ -361,7 +523,6 @@ module.exports = {
     },
 
 
-
     /**
      * 取 [偏好設定]
      *
@@ -373,7 +534,7 @@ module.exports = {
         console.log(consoleTitle2);
 
         const Setting = global.Setting;
-        console.log(consoleTitle2,'Setting:', Setting);
+        console.log(consoleTitle2, 'Setting:', Setting);
 
         return {
             isAdvance_Server_Start: Setting.isAdvance_Server_Start

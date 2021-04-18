@@ -82,7 +82,7 @@
         ipcRenderer.send('errorInWindow', error, url, line);
     };
 
-    const {locales} = remote.require('./config');  //取 [支援的語系] 清單: Array
+    const locales = remote.getGlobal('locales');   //取 [支援的語系] 清單: Array
     let i18n = remote.getGlobal('i18n');           //多國語系轉換
 
     const Mustache = require('mustache');  //樣版引擎 https://github.com/janl/mustache.js
@@ -108,7 +108,7 @@
 
         let consoleTitle2 = consoleTitle + '[load]';
 
-        let settingData = await mydb.getSetting();  //取出 setting 資料
+        let settingData = await mydb.getSetting();  //取出 setting 資料 (PS: 初次安裝時是無資料的)
         console.log(consoleTitle2, 'settingData:', settingData);
 
         //---------
@@ -132,8 +132,11 @@
             option.text = i18n.__(`Locales.${item}`);
             option.value = item;
 
-            if (settingData.locale === item) option.selected = 'selected';
-            //if (idx === 0) option.selected = 'selected';
+            if (settingData) {
+                if (settingData.locale === item) option.selected = 'selected';
+            } else {
+                if (idx === 0) option.selected = 'selected';
+            }
 
             select.appendChild(option);
         });

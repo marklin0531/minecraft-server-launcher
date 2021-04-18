@@ -68,7 +68,7 @@
 - 啟動時自動檢查更新: 目前需手動由 [選單] 選擇 [檢查更新]
 - 伺服器 jar檔改由線上下載: 目前是打包進安裝檔內
 - 檢測 JAVA 是否有安裝
-- 好友管理介面
+- [x] 好友管理介面
 
 ## 參考
 - Console 樣式 - https://css-tricks.com/old-timey-terminal-styling/

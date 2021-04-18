@@ -19,7 +19,7 @@
                 <div class="card-header">伺 服 器 設 定</div>
                 <div class="card-body">
                     <!-- start -->
-
+                    <input type="hidden" id="level_name" value="world"> <!--地圖存放的目錄-->
                     <div class="mb-3">
                         <label for="motd" class="form-label">* 伺服器介紹 (限輸入英文):</label>
                         <input type="text" class="form-control" id="motd" value="A Minecraft Server" maxlength="150" required>
@@ -30,30 +30,25 @@
                     <div class="mb-3">
                         <label for="version" class="form-label">* 伺服器版本:</label>
                         <select class="form-select is-valid2" id="version">
-<!--                            <option selected value="1.16.5">1.16.5</option>-->
-<!--                            <option value="1.16.4">1.16.4 - 尚未下載</option>-->
-<!--                            <option value="1.13.2">1.13.2</option>-->
-<!--                            <option value="1.12.2">1.12.2</option>-->
                         </select>
                     </div>
-<!--                    <div class="mb-3">-->
-<!--                        <label for="server_port" class="form-label">* 伺服器連接埠:</label>-->
-<!--                        <select class="form-select is-valid2" id="server_port">-->
-<!--                            <option selected value="25565">25565</option>-->
-<!--                            <option value="25566">25566</option>-->
-<!--                            <option value="25567">25567</option>-->
-<!--                        </select>-->
-<!--                    </div>-->
-<!--                    <div class="mb-3">-->
-<!--                        <label for="" class="form-label">* 地圖存放的目錄:</label>-->
-<input type="hidden" id="level_name" value="world">
-<!--                        <select class="form-select is-valid2" id="level_name">-->
-<!--                        </select>-->
-<!--                    </div>-->
+
                     <div class="mb-3">
                         <label for="ops" class="form-label">OP管理者: (逗號分隔多人，例: marge,jamie)</label>
                         <input type="text" class="form-control is-invalid2" id="ops" value="" placeholder="marge,jamie">
-                        <div class="invalid-feedback">
+
+                        <script id="template1" type="x-tmpl-mustache">
+                          {{^friends_empty}}好友:{{/friends_empty}}
+                          {{#friends}}
+                          <div class="form-check form-check-inline">
+                             <input class="form-check-input" type="checkbox" id="ops_{{friend_id}}" value="{{account}}" onclick="onclick_ops_checkbox(this)"
+                             {{checked}}>
+                             <label class="form-check-label" for="ops_{{friend_id}}">{{account}}</label>
+                          </div>
+                          {{/friends}}
+                        </script>
+                        <div id="container1" style="margin-left: 5px;">
+                            <!-- template1 Render HTML Here -->
                         </div>
                     </div>
                     <!-- end -->
@@ -284,10 +279,9 @@
         ipcRenderer.send('errorInWindow', error, url, line);
     };
 
-    const keyCodes = {
-        V: 86,
-    }
-
+    // const keyCodes = {
+    //     V: 86,
+    // }
     //PS: input 欄位只能做到貼上的功能
     // document.onkeydown = function(event){
     //     let toReturn = true
@@ -301,7 +295,8 @@
     //     return toReturn
     // }
 
-    const enums = remote.require('./common/enums');
+    const Mustache = require('mustache');  //樣版引擎 https://github.com/janl/mustache.js
+    //const enums = remote.require('./common/enums');
     const myElectron = remote.require('./common/myElectron');
     const mydb = remote.getGlobal('MyDB');  //資料庫模組
     const myMCServerManager = remote.require('./common/myMCServerManager');   //MC伺服器管理
@@ -323,6 +318,72 @@
     });
 
     //....................................................................................
+    /**
+     * 加工整合-好友是否在ops欄位內,如果是則 checked
+     *
+     * @param {object[]} [friends]  好友清單
+     */
+    let integrationFriendsFromElement = (friends = []) => {
+
+        //=== 勾選好友
+        let opsElement = document.getElementById('ops');
+        let ops = opsElement.value;  //空字串
+        let opsArray = ops.split(',');  //Array: ['']
+        opsArray = opsArray.filter(item => item !== '');  //Remove empty
+        //console.log(consoleTitle2, 'opsArray:', opsArray);
+
+        friends.forEach(item => {
+            item.checked = opsArray.indexOf(item.account) !== -1 ? 'checked':'';  //是否勾選
+        });
+        //console.log(consoleTitle2, 'friends:', friends);
+
+        return {
+            opsElement,  //input Element
+            opsArray,    //['jamie']
+            friends      //[{friend_id, account, checked}]
+        };
+
+    }
+
+    //PS: 讀取好友清單放入 Element: OP管理者
+    let load_friends_toElement = async () => {
+
+        let consoleTitle2 = consoleTitle + '[load_friends_toElement]';
+
+        //PS: 讀取資料
+        let friends = await mydb.getFriendList();
+        //console.log(consoleTitle2, 'friends:', friends);
+
+        integrationFriendsFromElement(friends);  //PS: 加工整合
+
+        //---------
+        //PS: 輸出HTML
+        var template1 = document.getElementById('template1').innerHTML;
+        var rendered1 = Mustache.render(template1, {
+            friends_empty: friends.length===0,  //無好友資料
+            friends: friends  //好友清單
+        });
+        document.getElementById('container1').innerHTML = rendered1;  //Render後的html放入Container
+        //---------
+
+    }
+
+    //PS: 勾選/取消勾選 好友 - ok
+    let onclick_ops_checkbox = (e) => {
+
+        //console.log(consoleTitle, 'ops_checked:', e.id, e, e.value, e.checked);
+
+        let {opsArray, opsElement} = integrationFriendsFromElement();  //PS: 加工整合
+
+        if (e.checked) {
+            if (opsArray.indexOf(e.value) === -1) opsArray.push(e.value);  //Add
+        }
+        if (!e.checked) opsArray = opsArray.filter(item => item !== e.value);  //Remove
+
+        //console.log('opsArray:', opsArray);
+        opsElement.value = opsArray.join(',');   //放入 input欄位
+
+    }
 
     //PS: 取支援的版本
     let getMCVersions = () => {
@@ -338,7 +399,7 @@
         MCVersions.forEach((item, idx) => {
             //console.log(consoleTitle, 'idx:', idx, ',item:', item);
             let option = document.createElement("option");
-            option.text = item.v;
+            option.text = `${item.s}-${item.v}`;
             option.value = item.v;
             if (idx === 0) option.selected = 'selected';
 
@@ -366,7 +427,7 @@
         let consoleTitle2 = consoleTitle + '[load_server]';
         //console.log(consoleTitle2, 'server_id:', server_id);
 
-        getMCVersions();   //PS: 取支援的版本
+        getMCVersions();           //PS: 取支援的版本
 
         if (server_id) {
             //PS: 修改
@@ -388,7 +449,6 @@
                 document.getElementById('version').value = server.version;
                 document.getElementById('motd').value = server.motd;
                 document.getElementById('version').value = server.version;
-                //document.getElementById('server_port').value = server.server_port;
                 document.getElementById('level_name').value = server.level_name;
                 document.getElementById('ops').value = server.ops;
                 document.getElementById('level_seed').value = server.level_seed;
@@ -404,14 +464,13 @@
                 setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="spawn_monsters"]'), server.spawn_monsters);
                 setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="generate_structures"]'), server.generate_structures);
 
-                //
+                //防噴
                 setCheckedValueOfRadioButtonGroup(document.querySelector('input[name="gamerule_keepInventory"]'), server.gamerule_keepInventory);
 
             }
 
             //PS: Disabled 不可修改的項目
             document.getElementById('version').setAttribute('disabled','disabled');
-            //document.getElementById('server_port').setAttribute('disabled','disabled');
 
             // document.getElementById('version').querySelectorAll(':not([selected])').forEach(option => {
             //     option.disabled = true
@@ -430,6 +489,9 @@
             document.getElementById('btnDestoryServer').style.display = 'none';  //BUTTON: 移除伺服器
 
         }
+
+
+        load_friends_toElement();  //PS: 讀取好友清單
 
     }
 
@@ -608,8 +670,6 @@
                 console.log(consoleTitle2, 'serverFolderPath:', serverFolderPath);
                 await myElectron.shellMoveItemToTrash(`${serverFolderPath}`);  //PS：路徑最後面必需有 /
             }
-
-
             //---------
             //關閉視窗
             btn_close();
@@ -623,11 +683,8 @@
      * 關閉視窗 - ok
      */
     let btn_close = () => {
-
         ipcRenderer.send('ipcMain_RenderList', {s: 'btn_close', data: {}});   //PS: 傳遞給 [主進程]
-
         remote.getCurrentWindow().close();  //關閉自己
-
     }
 
     //....................................................................................

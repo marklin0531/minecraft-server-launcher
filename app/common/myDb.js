@@ -4,7 +4,7 @@
  * 2021-04-06 友: 增加 migration
  * 2021-03-26 友
  */
-const consoleTitle = '[/app/common/mydb.js]';
+const consoleTitle = '[/app/common/myDb.js]';
 const mySqlite = require('../common/mySqlite');    //Sqlite3 DB模組
 const {is} = require('electron-util');  //相關好用的函式庫
 const path = require('path');
@@ -20,13 +20,12 @@ const path = require('path');
  *    mydb.db.close();             //關閉資料庫連線
  *
  */
-class MyDB {
+class MyDb {
 
     constructor(app) {
 
         let consoleTitle2 = consoleTitle + '[constructor]';
 
-        this.instance
         this.db = null
         this.app = app;
         this.appVersion = app.getVersion();  //APP版本 - project.json version
@@ -244,7 +243,69 @@ class MyDB {
 
                           created_at             DATETIME     DEFAULT CURRENT_TIMESTAMP`;
 
-        return schema_101;
+        let schema_110 = `-- 伺服器ID
+                          server_id              INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                          -- 伺服器介紹
+                          motd                   VARCHAR(150),
+
+                          -- 伺服器類型 - v1.1.0
+                          server                 VARCHAR(50) DEFAULT 'Vanilla',
+                          
+                          -- 伺服器版本
+                          version                VARCHAR(50),
+
+                          -- 伺服器連接埠
+                          server_port            VARCHAR(10)  DEFAULT '25565',
+
+                          -- 地圖的目錄
+                          level_name             VARCHAR(50),
+
+                          -- OP管理者
+                          ops                    TEXT         DEFAULT NULL,
+
+                          -- 地圖種子碼
+                          level_seed             VARCHAR(100) DEFAULT NULL,
+
+                          -- 開啟正版驗證
+                          online_mode            VARCHAR(5)   DEFAULT 'false',
+
+                          -- 遊戲模式
+                          gamemode               VARCHAR(5)   DEFAULT 'false',
+
+                          -- 地圖生成模式
+                          level_type             VARCHAR(10)  DEFAULT 'DEFAULT',
+
+                          -- 遊戲人數
+                          max_players            INTEGER      DEFAULT 10,
+
+                          -- 地獄傳送門
+                          allow_nether           VARCHAR(5)   DEFAULT 'true',
+
+                          -- 開啟玩家打玩家
+                          pvp                    VARCHAR(5)   DEFAULT 'true',
+
+                          -- 開啟飛行
+                          allow_flight           VARCHAR(5)   DEFAULT 'true',
+
+                          -- 難度設定
+                          difficulty             VARCHAR(5)   DEFAULT 'false',
+
+                          -- 啟用命令塊
+                          enable_command_block   VARCHAR(5)   DEFAULT 'false',
+
+                          -- 是否出現怪物
+                          spawn_monsters         VARCHAR(5)   DEFAULT 'false',
+
+                          -- 生成村莊、遺跡、廢棄礦坑
+                          generate_structures    VARCHAR(5)   DEFAULT 'false',
+
+                          -- 開啟防噴 (伺服器指令) - v1.0.1
+                          gamerule_keepInventory VARCHAR(5)   DEFAULT 'false',
+
+                          created_at             DATETIME     DEFAULT CURRENT_TIMESTAMP`;
+
+        return schema_110;
 
     }
 
@@ -260,15 +321,24 @@ class MyDB {
 
 
         //PS: 設定檔
-        let sqlCreateTable_Setting_new = `CREATE TABLE IF NOT EXISTS setting (${this.tableSchema_setting})`;
+        let sqlCreateTable_Setting_new = `CREATE TABLE IF NOT EXISTS setting
+                                          (
+                                              ${this.tableSchema_setting}
+                                          )`;
         await this.db.run(sqlCreateTable_Setting_new);
 
         //PS: MC伺服器設定值
-        let sqlCreateTable_Server_new = `CREATE TABLE IF NOT EXISTS server (${this.tableSchema_server})`;
+        let sqlCreateTable_Server_new = `CREATE TABLE IF NOT EXISTS server
+                                         (
+                                             ${this.tableSchema_server}
+                                         )`;
         await this.db.run(sqlCreateTable_Server_new);
 
         //PS: 好友名單
-        let sqlCreateTable_Friends_new = `CREATE TABLE IF NOT EXISTS friends (${this.tableSchema_friends})`;
+        let sqlCreateTable_Friends_new = `CREATE TABLE IF NOT EXISTS friends
+                                          (
+                                              ${this.tableSchema_friends}
+                                          )`;
         await this.db.run(sqlCreateTable_Friends_new);
 
     }
@@ -282,13 +352,14 @@ class MyDB {
      */
     async migration() {
 
-        let consoleTitle2 = consoleTitle + '[migration]';
+        let consoleTitle2 = consoleTitle + `[migration][${this.appVersion}]`;
 
         //PS: 取當前 APP 的版本,對前一個版本做migration
         switch (this.appVersion) {
             case '1.0.0':  //初始版本
                 //setting - 只有 dbVersion 欄位
-                let sql1 = `insert into setting (dbVersion) values ('1.0.0')`;
+                let sql1 = `insert into setting (dbVersion)
+                            values ('1.0.0')`;
                 await this.db.exec(sql1, []);  //一次執行多條SQL
                 break;
 
@@ -307,8 +378,13 @@ class MyDB {
 
                     let sqlg = [
                         `drop table if exists server_dg_tmp;`,
-                        `create table server_dg_tmp (${this.tableSchema_server});`,
-                        `insert into server_dg_tmp (${fields}) Select ${fields} From server;`,
+                        `create table server_dg_tmp
+                         (
+                             ${this.tableSchema_server}
+                         );`,
+                        `insert into server_dg_tmp (${fields})
+                         Select ${fields}
+                         From server;`,
                         `drop table server;`,
                         `alter table server_dg_tmp rename to server;`
                     ];
@@ -326,8 +402,12 @@ class MyDB {
 
                     let sqlg = [
                         `drop table if exists setting_dg_tmp;`,
-                        `create table setting_dg_tmp (${this.tableSchema_setting});`,
-                        `insert into setting_dg_tmp (version) values ('${this.appVersion}');`,
+                        `create table setting_dg_tmp
+                         (
+                             ${this.tableSchema_setting}
+                         );`,
+                        `insert into setting_dg_tmp (version)
+                         values ('${this.appVersion}');`,
                         `drop table setting;`,
                         `alter table setting_dg_tmp rename to setting;`
                     ];
@@ -339,12 +419,80 @@ class MyDB {
 
                 break;
 
+            case '1.1.0':  //升級 1.0.1 的 DB
+
+                //===
+                try {
+
+                    console.log(consoleTitle2, '升級資料表: server => 更新欄位型態、新增 [server]');
+
+                    //PS: 保留上一版的欄位資料
+                    let fields = `motd, version, server_port, level_name, ops, level_seed, online_mode,
+                    gamemode, level_type, max_players, allow_nether, pvp, allow_flight,
+                    difficulty, enable_command_block, spawn_monsters, generate_structures, gamerule_keepInventory`;
+
+                    let sqlg = [
+                        `drop table if exists server_dg_tmp;`,
+                        `create table server_dg_tmp
+                         (
+                             ${this.tableSchema_server}
+                         );`,
+                        `insert into server_dg_tmp (${fields})
+                         Select ${fields}
+                         From server;`,
+                        `drop table server;`,
+                        `alter table server_dg_tmp rename to server;`
+                    ];
+                    await this.db.exec(sqlg.join('\n'), []);  //一次執行多條SQL
+
+                } catch (e) {
+                    console.error(consoleTitle2, e.message);
+                }
+                //===
+                //PS: insert版本記錄
+                try {
+
+                    //=== PS: 保留前一版本的設定
+                    console.log(consoleTitle2, '讀取資料表: setting => 前一版本的設定');
+                    let sqls1 = `Select * From setting limit 1`;
+                    let prvSettingData = await this.db.get(sqls1, []);  //取前一版本
+                    //console.log(consoleTitle2, 'prvSettingData:', prvSettingData);
+                    if (!prvSettingData) {
+                        prvSettingData = {
+                            locale: 'zh-TW',
+                            isAdvance_Server_Start: 'false'
+                        }
+                    }
+                    //===
+                    console.log(consoleTitle2, '重建資料表: setting', prvSettingData);
+
+                    let sqlg = [
+                        `drop table if exists setting_dg_tmp;`,
+                        `create table setting_dg_tmp
+                         (
+                             ${this.tableSchema_setting}
+                         );`,
+                        `insert into setting_dg_tmp (version, locale, isAdvance_Server_Start)
+                         values ('${this.appVersion}','${prvSettingData.locale}','${prvSettingData.isAdvance_Server_Start}');`,
+                        `drop table setting;`,
+                        `alter table setting_dg_tmp rename to setting;`
+                    ];
+                    await this.db.exec(sqlg.join('\n'), []);  //一次執行多條SQL
+
+                } catch (e) {
+                    console.error(consoleTitle2, e.message);
+                }
+                //===
+
+                break;
+
             default:
 
-                console.log(consoleTitle2, '無升級資料表');
+                console.log(consoleTitle2, '無需升級資料表，僅更新版本號。');
 
                 //PS: 沒有更新DB的都只做 setting.version 更新, migrationCheck() 才不會每次啟動時都做更新.
-                let sqlu = `Update setting Set version = ?`;
+                let sqlu = `Update setting
+                            Set version = ?`;
                 await this.db.run(sqlu, [this.appVersion]);
 
                 break;
@@ -372,7 +520,7 @@ class MyDB {
         let setting = await this.getSetting();
         if (setting) {
             //有 this.appVersion, 不做更新
-            console.log(consoleTitle2, '無需升級DB');
+            //console.log(consoleTitle2, '無需升級資料表');
         } else {
             //setting 無此版本
 
@@ -385,6 +533,7 @@ class MyDB {
 
     /**
      * 取當前版本 - 設定值資料 - ok
+     * PS: 初次安裝時是無資料的
      *
      * @return {Promise<*>}
      *
@@ -402,7 +551,7 @@ class MyDB {
                        Where version = ?`;
             //console.log(consoleTitle2, 'sql:', sql, this.appVersion);
             let data = await this.db.get(sql, [this.appVersion]);  //取最新版本
-            console.log(consoleTitle2, data);
+            //console.log(consoleTitle2, data);
 
             global.Setting = data;   //PS: 共用
 
@@ -419,7 +568,7 @@ class MyDB {
     /**
      * 改變語系設定 - ok
      *
-     * @param locale    語系: en, zh-tw
+     * @param locale    語系: en-US, zh-TW
      *
      * @return {Promise<void>}
      */
@@ -500,6 +649,8 @@ class MyDB {
      * 取伺服器PORT清單 - ok
      *
      * @return {Promise<*>}
+     *
+     * call: /app/common/myMCServerManager.js => getServerUsedPortList()
      */
     async getServerUsedPortList() {
 
@@ -515,25 +666,26 @@ class MyDB {
     }
 
 
-    /**
-     * 取最新一筆的伺服器資料 - ok
-     *
-     * @return {Promise<*>}
-     */
-    async getLastServer() {
-
-        let consoleTitle2 = consoleTitle + '[getLastServer]';
-        console.log(consoleTitle2);
-
-        let sql = `Select *
-                   From server
-                   Order by server_id desc
-                   limit 1;`;
-        let data = await this.db.get(sql);
-
-        return data;
-
-    }
+    // Deprecated - 沒用到
+    // /**
+    //  * 取最新一筆的伺服器資料 - ok
+    //  *
+    //  * @return {Promise<*>}
+    //  */
+    // async getLastServer() {
+    //
+    //     let consoleTitle2 = consoleTitle + '[getLastServer]';
+    //     console.log(consoleTitle2);
+    //
+    //     let sql = `Select *
+    //                From server
+    //                Order by server_id desc
+    //                limit 1;`;
+    //     let data = await this.db.get(sql);
+    //
+    //     return data;
+    //
+    // }
 
     /**
      * 刪除伺服器資料 - ok
@@ -565,6 +717,8 @@ class MyDB {
      * @param server_id     伺服器ID
      * @param level_name    地圖目錄名稱
      * @return {Promise<void>}
+     *
+     * call: /app/form_setting_server_map.html => btn_select_map_folder()
      */
     async change_level_name(server_id, level_name) {
 
@@ -578,7 +732,78 @@ class MyDB {
 
     }
 
+
+    //region 好友管理
+
+    /**
+     * 取好友清單 -
+     *
+     * @return {Promise<*>}
+     */
+    async getFriendList() {
+
+        let consoleTitle2 = consoleTitle + '[getFriendList]';
+        //console.log(consoleTitle2);
+
+        let sql = `Select *
+                   From friends`;
+        let data = await this.db.all(sql);
+        //console.log(consoleTitle2, 'data:', data);
+
+        return data;
+
+    }
+
+    /**
+     * 移除好友
+     *
+     * @param friend_id
+     * @return {Promise<void>}
+     */
+    async removeFriend(friend_id) {
+
+        let consoleTitle2 = consoleTitle + '[removeFriend]';
+        let sql = `Delete
+                   From friends
+                   Where friend_id = ?`;
+        await this.db.run(sql, [friend_id]);
+
+    }
+
+    /**
+     * 新增好友
+     *
+     * @param account
+     * @return {Promise<void>}
+     */
+    async addFriend(account) {
+
+        let consoleTitle2 = consoleTitle + '[addFriend]';
+        let sql = `Insert into friends (account)
+                   values (?)`;
+        await this.db.run(sql, [account]);
+
+    }
+
+    /**
+     * 取好友資料 -
+     *
+     * @param account
+     * @return {Promise<*>}
+     */
+    async findFriend(account) {
+        let consoleTitle2 = consoleTitle + '[findFriend]';
+        let sql = `Select *
+                   From friends
+                   Where account = ?`;
+        let friend = await this.db.get(sql, [account]);
+        return friend;
+    }
+
+    //endregion
+
+
 }
 
 
-module.exports = MyDB;
+module.exports = MyDb;

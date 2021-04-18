@@ -25,6 +25,39 @@ Date.prototype.format = function (fmt) {
 }
 
 
+//region timestamp
+
+/**
+ * 取得 unix timestamp時間戳 (秒為單位計算)
+ * PS: Unix 時間戳是自 1970 年 1 月 1 日 00:00:00UTC 以來經過的時間，用秒來表示。
+ *
+ * PS: https://www.delftstack.com/zh-tw/howto/javascript/javascript-convert-timestamp-to-date/
+ *
+ * @return {number}
+ */
+let timestamp = function() {
+    const _dateTime = Date.now();  //毫秒為單位計算
+    const _timestamp = Math.floor(_dateTime / 1000);  //轉為秒
+    return _timestamp;
+}
+
+/**
+ *
+ * PS: JavaScript Date 物件包含了自 1970 年 1 月 1 日 00:00:00 UTC 以來經過的時間，以毫秒為單位。
+ *
+ * @param _timestamp  時間戳(秒)
+ * @return {Date}
+ */
+let timestamp2Datetime = (_timestamp) => {
+    var _date = new Date(_timestamp * 1000);  //轉為毫秒才會是正確時間
+    //console.log(_date, _date.getTime());
+    return _date;
+}
+
+
+//endregion
+
+
 /**
  * 取 yyyy-mm-dd 日期 - ok
  *
@@ -106,7 +139,11 @@ var console_showEndTime = function (sdate) {
 
 };
 
+
+//匯出
 module.exports = {
+    timestamp,
+    timestamp2Datetime,
     console_showEndTime: console_showEndTime,
     calculatorRunTimes: calculatorRunTimes,
     yyymmdd: yyymmdd

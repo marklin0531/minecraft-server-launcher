@@ -70,14 +70,14 @@ class myMCServerManager {
 
         //PS: 放入 this
         //"/Applications/minecraft Server Launcher.app/Contents/Resources/app.asar/1.12.2.jar"
-        this.appFolderPath = `${app.getAppPath()}`;
-        //this.appFolderPath = "/Applications/minecraft Server Launcher.app/Contents/Resources/app.asar/";
+        this.appFolderPath = `${app.getAppPath()}`; //AP 應用程式執行目錄,eg: /Applications/minecraft Server Launcher.app/Contents/Resources/app.asar
 
+        //打包後的路徑上二層
         if (this.appFolderPath.indexOf('asar') !== -1) {
-            this.appFolderPath = path.join(this.appFolderPath, '../../');
+            this.appFolderPath = path.join(this.appFolderPath, '../../');  //eg: /Applications/minecraft Server Launcher.app/Contents
         }
 
-        this.jarFolderPath = path.join(`${this.appFolderPath}`, 'server');     //存放伺服器Jar檔的目錄
+        this.jarFolderPath = path.join(`${this.appFolderPath}`, 'server');     //存放伺服器Jar檔的目錄,eg: /Applications/minecraft Server Launcher.app/Contents/server
         this.rootFolderPath = path.join(`${userDataPath}`, 'server');          //存放伺服器資料的主目錄
         this.serverFolderPath = path.join(`${this.rootFolderPath}`, `${this.server_id}`);  //存放每台伺服器資料的目錄
 
@@ -103,12 +103,16 @@ class myMCServerManager {
     static getVersionList() {
 
         let consoleTitle2 = consoleTitle + `[getVersionList]`;
-        let versions = require('../versions.json').versions;
+        //let versions = require('../versions.json').versions;
+        let config = global.config;
+        let versions = config.versions;
 
         //console.log(consoleTitle2, 'versions:', versions);
 
+        // let data = [];
         // versions.forEach(item => {
-        //     console.log(item.v);
+        //     //console.log(item.v);
+        //     data.push(`${item.s}-${item.v}`);
         // })
 
         return versions;

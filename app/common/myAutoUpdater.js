@@ -15,11 +15,11 @@ const myMachineResource = require('./myMachineResource');
 // [Environment]::SetEnvironmentVariable("GH_TOKEN","<YOUR_TOKEN_HERE>","User")
 
 let consoleTitle = '[/app/common/autoUpdater.js]';
-const checkUpdate = (win) => {
+const checkUpdate = () => {
 
     let consoleTitle2 = consoleTitle + '[checkUpdate]';
     let i18n = global.i18n;
-    //let winMain = BrowserWindow.getFocusedWindow();  //PS： 取當前Focus 的視窗
+    let win = global.winMain;  //改讀取全域變數
 
     const autoUpdater_progressBarText = new myProgressBar.TextBar({parentWin: null, text: '執行'});  //文字型進度條
 
@@ -70,7 +70,6 @@ const checkUpdate = (win) => {
     function sendStatusToWindow(text) {
         let consoleTitle3 = consoleTitle2 + '[sendStatusToWindow]';
         console.log(consoleTitle3, text);
-        //win.webContents.send('autoUpdater_message', text);  //傳給Renderer
     }
 
     //1.检查事件
@@ -107,7 +106,7 @@ const checkUpdate = (win) => {
             cancelId: 1,
         }).then(index => {
             if (index.response === 0) {
-                shell.openExternal(`${pkg.repository.url}/releases`);  //PS: 開啟Github Release頁
+                shell.openExternal(`${pkg.downloadurl}`);  //PS: 開啟Github Release頁
                 //autoUpdater.downloadUpdate();  //下載
             } else {
             }

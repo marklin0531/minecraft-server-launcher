@@ -7,19 +7,33 @@
     <link href="./css/bootstrap-v5.min.css" rel="stylesheet">
     <link rel="stylesheet" href="./css/bootstrap-icons.css">
     <link href="./css/public.css" rel="stylesheet">
+    <style>
+        .copyright {
+            position: absolute;
+            right: 0.5em;
+            bottom: 0.5em;
+            color: yellow;
+        }
+    </style>
 </head>
 <body>
 
 <div class="pb-2 px-3" style="padding-top: 20px;">
+    <div class="row" id="topNewsContainer" style="display: none;">
+        <div class="col-12">
+            <div class="alert alert-primary"><span id="topNewsBody"></span></div>
+        </div>
+    </div>
     <div class="row">
         <div class="col-sm-6">
             <div class="alert alert-danger"><span id="predictionCanStartServerTotal"></span></div>
         </div>
         <div class="col-sm-6">
             <div class="d-grid gap-1 d-flex justify-content-end">
-<!--                <a href="javascript:void(0);" class="btn btn-info" onclick="RenderList();">重新載入伺服器清單</a>-->
-<!--                <button type="button" class="btn btn-warning" onclick="RenderList();">切換語系</button>-->
-<!--                <button type="button" class="btn btn-warning" onclick="btn_server_create();">下載地圖</button>-->
+                <!--                <a href="javascript:void(0);" class="btn btn-info" onclick="RenderList();">重載清單</a>-->
+                <!--                <button type="button" class="btn btn-warning" onclick="btn_server_create();">下載地圖</button>-->
+                <!--<button type="button" class="btn btn-warning" onclick="btn_server_jar();">伺服器版本管理</button>-->
+                <button type="button" class="btn btn-warning" onclick="btn_friends();">好友管理</button>
                 <button type="button" class="btn btn-warning" onclick="btn_server_create();">新增伺服器</button>
             </div>
         </div>
@@ -38,14 +52,13 @@
                 <h5 class="card-title">{{motd}}</h5>
                 <p class="card-text">版本: {{version}}</p>
                 <p class="card-text">
+                   {{#publicIP}}
                    <span onclick="copyTextToClipboard('{{publicConnection}}');" title="複制" style="cursor:pointer">外網連線: {{publicConnection}} <i class="bi bi-clipboard"></i></span><br>
+                   {{/publicIP}}
                    <span onclick="copyTextToClipboard('{{privateConnection}}');" title="複制" style="cursor:pointer">內網連線: {{privateConnection}} <i class="bi bi-clipboard"></i></span>
                 </p>
               </div>
                 <div class="card-footer text-end" style="z-index: 1000;">
-                    <!--<a href="javascript:void(0);" class="btn btn-warning" onclick="btn_view_server_log('{{server_id}}');">啟動台</a>-->
-                    <!--isRunning: {{isRunning}}, server_id: {{server_id}}-->
-
                     {{#isRunning}}
                        <!--伺服器已啟動-->
                        <!--<button id="btnServerStop{{server_id}}" class="btn btn-danger" type="button" onclick="btn_server_stats('{{server_id}}');">
@@ -62,11 +75,13 @@
                     {{^isRunning}}
                        <!--伺服器未啟動-->
 
+                       {{#isNetworkOnline}}
                        <button id="btnServerStart{{server_id}}" class="btn btn-primary" type="button" onclick="btn_server_start('{{server_id}}');">
                           啟動
                        </button>
-                       <a href="javascript:void(0);" class="btn btn-warning" onclick="btn_setting_server_map('{{server_id}}');">設定地圖</a>
+                       {{/isNetworkOnline}}
 
+                       <a href="javascript:void(0);" class="btn btn-warning" onclick="btn_setting_server_map('{{server_id}}');">設定地圖</a>
                     {{/isRunning}}
 
                     <a href="javascript:void(0);" class="btn btn-warning" onclick="btn_server_create('{{server_id}}');">設定伺服器</a>
@@ -75,6 +90,7 @@
         </div>
     {{/list}}
 
+
     </script>
     <div class="row" id="container1">
         <!-- template1 Render HTML Here -->
@@ -82,7 +98,11 @@
 </div>
 
 <div style="padding-bottom: 10px;"></div>
-
+<footer class="footer">
+    <div class="copyright" id="copyright">
+        <!--尚未安裝java - 有新版本v1.1.0-->
+    </div>
+</footer>
 </body>
 </html>
 
@@ -92,7 +112,7 @@
     const {app, dialog} = remote;
 
     //PS: 攔截錯誤送給 main process
-    window.onerror = function(error, url, line) {
+    window.onerror = function (error, url, line) {
         ipcRenderer.send('errorInWindow', error, url, line);
     };
 
@@ -107,10 +127,40 @@
     const myMCServerManager = remote.require('./common/myMCServerManager');   //MC伺服器管理
 
     //....................................................................................
+    //PS: Top訊息顯示
+    const config = remote.getGlobal('config');
+    const isNetworkOnline = remote.getGlobal('isNetworkOnline');
+    const isFindJavaHome = remote.getGlobal('isFindJavaHome');
+    //const isFindJavaHome = false;
+
+    let topNewsContainer = document.getElementById('topNewsContainer');
+    let topNewsBody = document.getElementById('topNewsBody');
+    //console.log(consoleTitle, 'config:', config);
+    //console.log(consoleTitle, 'topNewsContainer:', topNewsContainer);
+    //console.log(consoleTitle, 'config.isNewVer:', config.isNewVer);
+
+    if (!isNetworkOnline) {
+        topNewsContainer.style.display = 'block';
+        topNewsBody.innerHTML = `哦哦～請先檢查你的網路連線是否正常，確認可以連上網路後再重新啟動軟體唷!!`;
+    } else {
+        if (!isFindJavaHome) {
+            topNewsContainer.style.display = 'block';
+            topNewsBody.innerHTML = `請注意: 你的電腦環境必需安裝 java 才能執行此軟體唷!!`;
+        } else {
+            if (config.isNewVer) {
+                topNewsContainer.style.display = 'block';
+                topNewsBody.innerHTML = `<a href="${config.downloadUrl}" target="_blank">有新版本: ${config.latest} 請立即下載</a>`;
+            } else {
+                topNewsContainer.style.display = 'none';
+            }
+        }
+    }
+
+    //....................................................................................
     //PS: 複制文字到剪貼簿
     let copyTextToClipboard = (text) => {
         myElectron.copyTextToClipboard(text);
-        myElectron.showDialogMessage('Copy',`已將 ${text} 複制到剪貼簿囉`);
+        myElectron.showDialogMessage('Copy', `已將 ${text} 複制到剪貼簿囉`);
     }
 
     //....................................................................................
@@ -118,7 +168,7 @@
     let predictionCanStartServerTotal = () => {
         let consoleTitle2 = consoleTitle + '[predictionCanStartServerTotal]';
 
-        let canStartServerTotal = Math.floor((machineResource.memInfo.freeMemMb-300) / 1024);
+        let canStartServerTotal = Math.floor((machineResource.memInfo.freeMemMb - 300) / 1024);
 
         //let msg = `根據電腦資源推算，建議最多啟動 ${canStartServerTotal}台伺服器`;
         let msg = i18n.__('predictionCanStartServerTotal %d', canStartServerTotal);
@@ -134,11 +184,19 @@
     /**
      * 接收主進程(index.js)的訊息
      */
+
+    //載入資料 - ok
+    //call: app/index.js
+    ipcRenderer.on('load', async (event, param1) => {
+        //console.log(consoleTitle, '[ipcRenderer][load2] param1:', param1);
+        await RenderList();
+    });
+
+    //
     ipcRenderer.on('ipcRenderer_RenderList', async (event, param1) => {
         console.log(consoleTitle, '[ipcRenderer][ipcRenderer_RenderList]');
         await RenderList();
     });
-
     //....................................................................................
     /**
      * 動態產生 - 伺服器清單HTML - ok
@@ -169,11 +227,16 @@
             console.log(consoleTitle2, `=== 建立單一實例 mcServerLauncher[${item.server_id}]:`, mcServerLauncher);
             //===
 
+            item.isNetworkOnline = isNetworkOnline;  //網路是否連線
+
             //PS: 增加 伺服器狀態
             item.isRunning = mcServerLauncher.isRunning;  //true=已啟動, false=已停止
 
             //=== 內/外網IP
+            item.privateIP = machineResource.privateIP;
             item.privateConnection = `${machineResource.privateIP}:${item.server_port}`;  //內網IP:PORT
+
+            item.publicIP = machineResource.publicIP;
             item.publicConnection = `${machineResource.publicIP}:${item.server_port}`;    //外網IP:PORT
             //===
 
@@ -204,13 +267,13 @@
     //BUTTON: 啟動伺服器 - ok
     let btn_server_restart = async (server_id) => {
 
-            let consoleTitle2 = consoleTitle + '[btn_server_restart]';
-            console.log(consoleTitle2);
+        let consoleTitle2 = consoleTitle + '[btn_server_restart]';
+        console.log(consoleTitle2);
 
-            //呼叫 [主進程]
-            ipcRenderer.send('server_restart', {server_id});
+        //呼叫 [主進程]
+        ipcRenderer.send('server_restart', {server_id});
 
-        }
+    }
 
     //BUTTON: 啟動伺服器 - ok
     let btn_server_start = async (server_id) => {
@@ -256,39 +319,38 @@
 
     }
 
-    //BUTTON: 伺服器LOG-表單 - ok
-    let btn_view_server_log = async (server_id) => {
-
-        console.log(consoleTitle, '[btn_view_server_log]');
-
-        //呼叫 [主進程] 開啟 [伺服器LOG表單] 視窗
-        ipcRenderer.send('openwin_view_server_log', {server_id});
-
-    }
     //endregion
     //....................................................................................
     //region 主要管理
 
+    //BUTTON: 伺服器版本管理-表單 -
+    let btn_server_jar = async () => {
+        ipcRenderer.send('openwin_form_server_jar', {});
+    }
+
+    //BUTTON: 好友管理-表單 - ok
+    let btn_friends = async () => {
+        console.log(consoleTitle, '[btn_friends]');
+
+        //呼叫 [主進程] 開啟 [好友管理表單] 視窗
+        ipcRenderer.send('openwin_friends', {});
+    }
+
     //BUTTON: 新增伺服器-表單 - ok
     let btn_server_create = async (server_id) => {
 
-            console.log(consoleTitle, '[btn_server_create]');
+        console.log(consoleTitle, '[btn_server_create]');
 
-            //呼叫 [主進程] 開啟 [新增伺服器表單] 視窗
-            ipcRenderer.send('openwin_setting_server', {server_id});
+        //呼叫 [主進程] 開啟 [新增伺服器表單] 視窗
+        ipcRenderer.send('openwin_setting_server', {server_id});
 
-        }
-
-    //BUTTON: 重新載入伺服器清單 - ok
-    let btn_reload_list = async () => {
-        await RenderList();
     }
     //endregion
     //....................................................................................
-    (async () => {
-
-        await RenderList();  //Start
-
-    })();
+    // (async () => {
+    //
+    //     await RenderList();  //Start
+    //
+    // })();
     //....................................................................................
 </script>
