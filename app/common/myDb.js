@@ -422,66 +422,63 @@ class MyDb {
             case '1.1.0':  //升級 1.0.1 的 DB
 
                 //===
-                try {
+                console.log(consoleTitle2, '升級資料表: server => 更新欄位型態、新增 [server]');
 
-                    console.log(consoleTitle2, '升級資料表: server => 更新欄位型態、新增 [server]');
+                //PS: 保留上一版的欄位資料
+                let fields = `motd, version, server_port, level_name, ops, level_seed, online_mode,
+                    gamemode, level_type, allow_nether, pvp,
+                    difficulty, enable_command_block, spawn_monsters, generate_structures`;
 
-                    //PS: 保留上一版的欄位資料
-                    let fields = `motd, version, server_port, level_name, ops, level_seed, online_mode,
-                    gamemode, level_type, max_players, allow_nether, pvp, allow_flight,
-                    difficulty, enable_command_block, spawn_monsters, generate_structures, gamerule_keepInventory`;
+                let sqlg1 = [
+                    `drop table if exists server_dg_tmp;`,
+                    `create table server_dg_tmp
+                     (
+                         ${this.tableSchema_server}
+                     );`,
+                    `insert into server_dg_tmp (${fields})
+                     Select ${fields}
+                     From server;`,
+                    `drop table server;`,
+                    `alter table server_dg_tmp rename to server;`
+                ];
+                await this.db.exec(sqlg1.join('\n'), []);  //一次執行多條SQL
 
-                    let sqlg = [
-                        `drop table if exists server_dg_tmp;`,
-                        `create table server_dg_tmp
-                         (
-                             ${this.tableSchema_server}
-                         );`,
-                        `insert into server_dg_tmp (${fields})
-                         Select ${fields}
-                         From server;`,
-                        `drop table server;`,
-                        `alter table server_dg_tmp rename to server;`
-                    ];
-                    await this.db.exec(sqlg.join('\n'), []);  //一次執行多條SQL
-
-                } catch (e) {
-                    console.error(consoleTitle2, e.message);
-                }
                 //===
                 //PS: insert版本記錄
-                try {
+                //try {
 
-                    //=== PS: 保留前一版本的設定
-                    console.log(consoleTitle2, '讀取資料表: setting => 前一版本的設定');
-                    let sqls1 = `Select * From setting limit 1`;
-                    let prvSettingData = await this.db.get(sqls1, []);  //取前一版本
-                    //console.log(consoleTitle2, 'prvSettingData:', prvSettingData);
-                    if (!prvSettingData) {
-                        prvSettingData = {
-                            locale: 'zh-TW',
-                            isAdvance_Server_Start: 'false'
-                        }
+                //=== PS: 保留前一版本的設定
+                console.log(consoleTitle2, '讀取資料表: setting => 前一版本的設定');
+                let sqls1 = `Select *
+                             From setting
+                             limit 1`;
+                let prvSettingData = await this.db.get(sqls1, []);  //取前一版本
+                //console.log(consoleTitle2, 'prvSettingData:', prvSettingData);
+                if (!prvSettingData) {
+                    prvSettingData = {
+                        locale: 'zh-TW',
+                        isAdvance_Server_Start: 'false'
                     }
-                    //===
-                    console.log(consoleTitle2, '重建資料表: setting', prvSettingData);
-
-                    let sqlg = [
-                        `drop table if exists setting_dg_tmp;`,
-                        `create table setting_dg_tmp
-                         (
-                             ${this.tableSchema_setting}
-                         );`,
-                        `insert into setting_dg_tmp (version, locale, isAdvance_Server_Start)
-                         values ('${this.appVersion}','${prvSettingData.locale}','${prvSettingData.isAdvance_Server_Start}');`,
-                        `drop table setting;`,
-                        `alter table setting_dg_tmp rename to setting;`
-                    ];
-                    await this.db.exec(sqlg.join('\n'), []);  //一次執行多條SQL
-
-                } catch (e) {
-                    console.error(consoleTitle2, e.message);
                 }
+                //===
+                console.log(consoleTitle2, '重建資料表: setting', prvSettingData);
+
+                let sqlg2 = [
+                    `drop table if exists setting_dg_tmp;`,
+                    `create table setting_dg_tmp
+                     (
+                         ${this.tableSchema_setting}
+                     );`,
+                    `insert into setting_dg_tmp (version, locale, isAdvance_Server_Start)
+                     values ('${this.appVersion}', '${prvSettingData.locale}', '${prvSettingData.isAdvance_Server_Start}');`,
+                    `drop table setting;`,
+                    `alter table setting_dg_tmp rename to setting;`
+                ];
+                await this.db.exec(sqlg2.join('\n'), []);  //一次執行多條SQL
+
+                // } catch (e) {
+                //     console.error(consoleTitle2, e.message);
+                // }
                 //===
 
                 break;

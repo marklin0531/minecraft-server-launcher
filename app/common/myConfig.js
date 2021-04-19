@@ -417,7 +417,7 @@ module.exports = {
         });
 
         global.i18n = i18n;
-        console.log(consoleTitle2, 'global.i18n:', global.i18n);
+        //console.log(consoleTitle2, 'global.i18n:', global.i18n);
 
         //let locale = i18n.getLocale()  //取當前語系
         //i18n.setLocale('zh-TW')     //切換語系-繁體
