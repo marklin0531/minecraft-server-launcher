@@ -64,11 +64,12 @@ let isNetworkOnline = async () => {
  */
 let versionCompare = (newVer, oldVer) => {
 
+    let consoleTitle2 = consoleTitle + '[versionCompare]';
     let newVer2 = newVer.split('.').map((item) => item.padStart(2, '0')).join('.');
     let oldVer2 = oldVer.split('.').map((item) => item.padStart(2, '0')).join('.');
 
     let isNewVer = newVer2 > oldVer2;
-    //console.log(newVer2, '>', oldVer2, '=', newVer2 > oldVer2);
+    //console.log(consoleTitle2, newVer2, '>', oldVer2, '=', newVer2 > oldVer2);
 
     return isNewVer;
 
@@ -84,8 +85,8 @@ let loadOnlineConfig = async () => {
 
     //------------
     //PS: 下載線上的設定檔
-    let configUrl = `${apiurl}/config.json?t=${myDate.timestamp()}`;
     let configFile = `config.json`;   //設定檔檔名
+    let configUrl = `${apiurl}/${configFile}?t=${myDate.timestamp()}`;
     let configFilePath = null;        //設定檔存放路徑
     let configDefaultFilePath = path.join(`${app.getAppPath()}`, `${configFile}`);  //AP目錄下的檔案路徑
 
@@ -109,13 +110,13 @@ let loadOnlineConfig = async () => {
         localConfig = fs.readFileSync(configFilePath, {encoding:'utf-8'});
     }
     //------------
-    //PS: 讀取預設檔
+    //PS: 讀取預設檔 - 寫入全域變數
     //console.log(consoleTitle2, 'localConfig:', localConfig);
-    localConfig = JSON.parse(localConfig);
+    localConfig = JSON.parse(localConfig);       //字串轉JSON
     localConfig.thisAppVersion = appVersion;     //當前使用的版本
-    localConfig.isNewVer = false;                //true=有新版本
+    localConfig.isNewVer = versionCompare(localConfig.latest, appVersion); //比對版號是否有新版本: true=有新版本
     localConfig.downloadUrl = pkg.downloadurl;   //下載的頁面
-    global.config = localConfig;   //放入全域
+    global.config = localConfig;                 //放入全域
 
     //------------
     //PS: 網路連線中
@@ -123,26 +124,23 @@ let loadOnlineConfig = async () => {
 
         fetch(configUrl)
             .then(res => res.json())
-            .then(json => {
+            .then(onlineConfig => {
 
-                //console.log(consoleTitle2, json);
+                //console.log(consoleTitle2, onlineConfig);
                 //PS: Save to /config.json
-                fs.writeFile(configFilePath, JSON.stringify(json, null, 4), function (err) {
-                    if (err) {
-                        throw err;
-                    }
+                fs.writeFile(configFilePath, JSON.stringify(onlineConfig, null, 4), function (err) {
+                    if (err) throw err;
+
                     console.log(consoleTitle2, 'Saved! =>', configFilePath);
 
                     let spendSecTimes = myDate.calculatorRunTimes(sdate).milliseconds;  //計算花費秒數
                     console.log(consoleTitle2, '=== End', new Date(), ` => 花費: ${spendSecTimes} 毫秒`);
 
                     //PS: 寫入全域變數
-                    let isNewVer = versionCompare(json.latest, appVersion);  //比對版號是否有新版本
-                    json.thisAppVersion = appVersion;     //當前使用的版本
-                    json.isNewVer = isNewVer;             //true=有新版本
-                    json.downloadUrl = pkg.downloadurl;   //下載的頁面
-                    global.config = json;   //放入全域
-
+                    onlineConfig.thisAppVersion = appVersion;     //當前使用的版本
+                    onlineConfig.isNewVer = versionCompare(onlineConfig.latest, appVersion); //比對版號是否有新版本: true=有新版本
+                    onlineConfig.downloadUrl = pkg.downloadurl;   //下載的頁面
+                    global.config = onlineConfig;                 //放入全域
                     //console.log(consoleTitle2, 'global.config:', global.config);
 
                 });
