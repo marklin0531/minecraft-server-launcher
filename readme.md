@@ -1,5 +1,5 @@
 # minecraft Server Launcher
-
+![mainWin-3.jpeg](screenshot/mainWin-3.jpeg)<br>
 [![Status](https://img.shields.io/badge/npm-v6.14.4-blue.svg)](https://www.npmjs.com/)
 [![Status](https://img.shields.io/badge/node-v12.16.2-blue.svg)](https://nodejs.org/en/download/)
 [![Status](https://img.shields.io/badge/License-MIT-red.svg)](https://github.com/marklin0531/minecraft-server-launcher)
@@ -20,7 +20,7 @@
 
 ## 畫面擷圖
 
-### 啟動畫面 x 3
+### 啟動畫面 x 3 (隨機顯示)
 ![splash-1.jpeg](screenshot/splash-1.jpeg)<br />
 ![splash-2.jpeg](screenshot/splash-2.jpeg)<br />
 ![splash-3.jpeg](screenshot/splash-3.jpeg)<br />
@@ -31,7 +31,7 @@
 ### 伺服器新增
 ![server-add.jpeg](screenshot/server-add.jpeg)<br />
 
-### 主畫面-伺服器清單
+### 主畫面-伺服器管理
 ![mainWin-2.jpeg](screenshot/mainWin-2.jpeg)<br />
 
 ### 伺服器地圖目錄
@@ -42,6 +42,17 @@
 
 ### 偏好設定
 ![preference.jpeg](screenshot/preference.jpeg)<br />
+
+### 好友管理
+![my-friends.jpeg](screenshot/my-friends.jpeg)<br />
+
+
+## 待開發功能
+- 多國語言: 目前尚未處理對應表與全部程式使用i18n
+- [x] 啟動時自動檢查更新: 目前需手動由 [選單] 選擇 [檢查更新] - v1.1.0
+- 伺服器 jar檔改由線上下載: 目前是打包進安裝檔內
+- [x] 檢測 JAVA 是否有安裝 - v1.1.0
+- [x] 好友管理介面 - v1.1.0
 
 
 ### 移除軟體 - TODO
@@ -63,13 +74,6 @@
 - 打包
 - 上傳 Github Releases
 
-## 待開發功能
-- 多國語言: 目前尚未處理對應表與全部程式使用i18n
-- 啟動時自動檢查更新: 目前需手動由 [選單] 選擇 [檢查更新]
-- 伺服器 jar檔改由線上下載: 目前是打包進安裝檔內
-- 檢測 JAVA 是否有安裝
-- [x] 好友管理介面
-
 ## 參考
 - Console 樣式 - https://css-tricks.com/old-timey-terminal-styling/
 
@@ -79,6 +83,7 @@
 - electron-icon-builder 製作打包所需的ICON尺寸
 - electron-updater 應用程式自動更新
 - electron-util 相關好用的函式庫
+- electron-fetch 下載檔案
 - electron-progressbar 進度條
 - about-window  自訂 [關於] 的顯示內容
 - byte-size 格式化容量的數字
@@ -94,6 +99,8 @@
 - rimraf 遞回刪除目錄
 - mkdirp 遞回建立目錄
 - i18n-2 多國語系
+- find-java-home 檢查 java 是否安裝
+
 
 ## 免責聲明
 - 本應用程式所使用之 ICON、背景圖 皆為 Google搜尋而來，如有冒犯之處請見諒，告知後會盡快移除，謝謝。
