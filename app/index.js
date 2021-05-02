@@ -8,10 +8,7 @@
  */
 const consoleTitle = '[/app/index.js]';
 const {app, BrowserWindow, ipcMain} = require('electron');
-const ipcManOpenWindows = require('./common/ipcManOpenWindows');
-const ipcManMCServer = require('./common/ipcManMCServer');
-const enums = require('./common/enums');
-const mySecurity = require('./common/mySecurity');
+app.commandLine.appendSwitch("disable-renderer-backgrounding");  //2021-04-13 背景中仍不降低性能 - https://pracucci.com/electron-slow-background-performances.html
 //....................................................................................
 const {
     width,
@@ -26,15 +23,17 @@ const {
     getMachineResource,
     initDB,
     initLocale,
-    isDev,
     isEnableDevTools,
     isShowDevTools,
     locales
 } = require('./common/myConfig');   //設定檔 => global.i18n
 regLocale();  //(一次性) 註冊-多國語系
 
-//2021-04-13 背景中仍不降低性能 - https://pracucci.com/electron-slow-background-performances.html
-app.commandLine.appendSwitch("disable-renderer-backgrounding");
+require('./common/ipcManMCServer');    //註冊ipcMan事件
+const ipcManOpenWindows = require('./common/ipcManOpenWindows');  //註冊Renderer事件
+const enums = require('./common/enums');
+const mySecurity = require('./common/mySecurity');
+const {createBrowserWindows} = require('./common/myElectron');
 //....................................................................................
 //region APP 監聽
 
@@ -42,7 +41,7 @@ app.commandLine.appendSwitch("disable-renderer-backgrounding");
  * 全部視窗都關閉時觸發
  */
 app.on('window-all-closed', () => {
-    console.log(consoleTitle, '[app] window-all-closed');
+    console.log(consoleTitle, '[app.on] window-all-closed');
     if (process.platform !== 'darwin') {
         app.quit();  //before-quit event will be emitted first
     }
@@ -52,7 +51,7 @@ app.on('window-all-closed', () => {
  * 重新啟動時觸發
  */
 app.on('activate', async () => {
-    console.log(consoleTitle, '[app] activate');
+    console.log(consoleTitle, '[app.on] activate');
 
     //PS: 程式內的寫法需注意如果有 [註冊事件] ,在重啟時是否會重覆註冊的情況.
 
@@ -92,7 +91,7 @@ process.on("unhandledRejection", (e) => {
 
 //endregion
 //....................................................................................
-//region Loading 視窗
+//region Splash視窗
 
 let winSplash = null;
 const splash = async () => {
@@ -100,7 +99,7 @@ const splash = async () => {
     let consoleTitle2 = consoleTitle + '[splash]';
 
     let id = mySecurity.getRandom(0, 2);  //隨機取0~2的數字
-    console.log(consoleTitle2, `id:`, id);
+    //console.log(consoleTitle2, `id:`, id);
 
     let splashData = [
         {
@@ -120,39 +119,51 @@ const splash = async () => {
         }
     ]
 
-    winSplash = new BrowserWindow({
-        backgroundColor: '#ffffff',  //背景色
-        width: splashData[id].w,
-        height: splashData[id].h,
-        frame: false,       //無框
-        resizable: false,   //不可改變視窗大小
-        alwaysOnTop: true,  //將視窗顯示在最上層
-        //parent: winMain,    //父層
-        //modal: true,       //Modal模式
-        webPreferences: {
-            devTools: isEnableDevTools,   //關閉開發工具
-            contextIsolation: false,
-            nodeIntegration: true,
-            enableRemoteModule: true   //開啟 Renderer 可以使用 remote 方法
+    let _w = splashData[id].w;
+    let _h = splashData[id].h;
+
+    winSplash = await createBrowserWindows({
+        winName: 'splash',       //視窗名稱
+        winTitle: null,          //視窗標題
+        url: `file://${__dirname}/splash-${id}.html`,  //視窗載入檔的路徑
+
+        frame: false,      //無邊框
+        show: true,        //視窗顯示
+        hideMenu: true,    //選單不隱藏
+        parent: null,      //父層BrowserWindow
+
+        width: _w,         //視窗寬
+        height: _h,        //視窗高
+        minWidth: _w,      //視窗最小寬
+        minHeight: _h,     //視窗最小高
+
+        resizable: false,   //視窗縮放大小
+        minimizable: false, //視窗最小化
+        maximizable: false, //視窗最大化
+
+        alwaysOnTop: true,  //視窗顯示於最上層
+        modal: false,       //視窗設為Modal
+
+        backgroundColor: '#ffffff',  //視窗背景色
+        isEnableDevTools: false,     //關閉開發工具
+        openDevTools: false,         //是否開啟開發工具視窗
+
+        //視窗載入
+        onLoad: function (event) {
+            let consoleTitle3 = consoleTitle2 + '[win.on][did-finish-load]';
+            //console.log(consoleTitle3, 'this:', this);
+        },
+        //視窗關閉
+        onClose: function () {
+            let consoleTitle3 = consoleTitle2 + '[win.on][close]';
+            //console.log(consoleTitle3, 'this:', this);
+            //console.log(consoleTitle3, 'this.win:', this.win);
         }
-    });
-
-    //視窗關閉
-    winSplash.on('closed', () => {
-        let constTitle3 = consoleTitle2 + '[winSplash.on][closed]';
-        winSplash = null;
-        //console.log(constTitle3, 'winSplash');
     })
-
-    //PS: 載入主頁面
-    const url = `file://${__dirname}/splash-${id}.html`;
-    //console.log(consoleTitle2, 'winSplash 載入:', url);
-    await winSplash.loadURL(url);
 
 }
 
 //endregion
-
 //....................................................................................
 //region 主視窗
 
@@ -162,75 +173,66 @@ const createMain = async () => {
     let consoleTitle2 = consoleTitle + '[createMain]';
     console.log(consoleTitle2);
 
-    //....................................................................................
-    //PS: 建立視窗
-    winMain = new BrowserWindow({
-        backgroundColor: '#ffffff',  //背景色
-        width: width,
-        height: height,
-        minWidth: width / 2.5,    //最小寬
-        minHeight: height / 1.5,  //最小高
-        show: false,    //先隱藏
-        webPreferences: {
-            devTools: isEnableDevTools,   //關閉開發工具
-            contextIsolation: false,
-            nodeIntegration: true,
-            enableRemoteModule: true   //開啟 Renderer 可以使用 remote 方法
+    let winName = 'index';                   //視窗名稱
+    winMain = await createBrowserWindows({
+        winName: winName,                    //視窗名稱
+        winTitle: `${enums.project.title}`,  //視窗標題
+        url: `file://${__dirname}/index.html`,  //視窗載入檔的路徑
+
+        show: false,       //視窗先隱藏
+        hideMenu: false,   //選單不隱藏
+        parent: null,      //父層BrowserWindow
+
+        width: width,             //視窗寬
+        height: height,           //視窗高
+        minWidth: width / 2.5,    //視窗最小寬
+        minHeight: height / 1.5,  //視窗最小高
+
+        resizable: true,   //視窗縮放大小
+        minimizable: true, //視窗最小化
+        maximizable: true, //視窗最大化
+
+        alwaysOnTop: false,  //視窗顯示於最上層
+        modal: false,        //視窗設為Modal
+
+        backgroundColor: '#ffffff',  //視窗背景色
+        isEnableDevTools,   //關閉開發工具
+        openDevTools: isShowDevTools[winName],  //是否開啟開發工具視窗
+
+        //視窗載入
+        onLoad: function (event) {
+
+            let consoleTitle3 = consoleTitle2 + '[winMain.on][did-finish-load]';
+            //console.log(consoleTitle3, 'this:', this);
+
+            //PS: (X) 載入清單 - 2021-04-16 改用觸發事件
+            //ipcMain.emit('ipcMain_RenderList', event, {});
+
+            //PS: 2021-04-18 改用傳遞訊息給 Renderer: index.html
+            this.win.webContents.send('load', {});
+
+        },
+        //視窗關閉
+        onClose: function () {
+
+            let consoleTitle3 = consoleTitle2 + '[winMain.on][close]';
+            //console.log(consoleTitle3, 'this:', this);
+            //console.log(consoleTitle3, 'this.win:', this.win);
+            //console.log(consoleTitle3, 'global.winMain:', global.winMain);
+
+            //關閉所有子視窗
+            for (let window of BrowserWindow.getAllWindows()) {
+                if (window !== global.winMain) window.close();
+            }
+
+            //關閉DB連線
+            global.MyDB.close();
+
+            //催毀自己 (其實BrowserWindow自己會催毀)
+            global.winMain = null;
+
         }
-    });
-    //winMain.setMenu(null);    //隱藏選單 (macOS 不會消失，win10會消失)
-    if (isShowDevTools.winMain) winMain.openDevTools();  //開啟 DevTools (Mac - Alt+Command+I)
-
-    //....................................................................................
-    //region PS: 註冊事件
-    /**
-     * 攔截html的視窗標題異動
-     */
-    winMain.on('page-title-updated', function (e) {
-        let constTitle3 = consoleTitle2 + '[winMain.on][page-title-updated]';
-        e.preventDefault();
-    });
-    winMain.setTitle(`${enums.project.title}`);  //變更視窗標題
-
-    //視窗關閉
-    winMain.on('closed', () => {
-
-        let constTitle3 = consoleTitle2 + '[winMain.on][closed]';
-
-        //關閉所有子視窗
-        for (let window of BrowserWindow.getAllWindows()) {
-            if (window !== winMain) window.close();
-        }
-
-        //關閉DB連線
-        global.MyDB.close();
-
-        winMain = null;
-        //console.log(constTitle3, 'winMain');
-
-    });
-
-    /**
-     * 一個框架中的文字載入完成後觸發該事件
-     */
-    winMain.webContents.on('did-finish-load', async (event) => {
-
-        let consoleTitle3 = consoleTitle2 + '[winMain.on][渲染][did-finish-load]';
-
-        //PS: (X) 載入清單 - 2021-04-16 改用觸發事件
-        //ipcMain.emit('ipcMain_RenderList', event, {});
-
-        //PS: 2021-04-18 改用傳遞訊息給 Renderer
-        winMain.webContents.send('load', {});
-
-    });
-    //endregion
-    //....................................................................................
-    //PS: 載入主頁面
-    const url = `file://${__dirname}/index.html`;
-    //console.log(consoleTitle2, 'winMain 載入:', url);
-    await winMain.loadURL(url);
-
+    })
     //....................................................................................
     global.winMain = winMain; //放入全域，讓 ipcManOpenWinndows.js/myAutoUpdater.js 使用
     winMain.show();           //主視窗
@@ -238,13 +240,13 @@ const createMain = async () => {
 
 }
 //endregion
-
+//....................................................................................
 //初始化 (可重覆載入)
 let init = async () => {
 
     await splash();              //PS: 啟動畫面
 
-    await loadOnlineConfig();    //讀取線上的設定檔
+    await loadOnlineConfig();    //PS: 讀取放在線上的 Github 倉庫內的設定檔 config.json
     find_java_home();            //找尋系統內是否有安裝 java
 
     await initDB(app);           //建立資料表, Migration, Setting讀取
@@ -267,5 +269,4 @@ app.whenReady().then(async () => {
 
     }
 );  //建立主視窗
-
 //....................................................................................

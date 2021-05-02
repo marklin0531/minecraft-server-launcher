@@ -2,6 +2,8 @@
  * Minecraft 伺服器 - 啟動器
  *
  * 2021-03-28 友
+ *
+ * call: /app/common/myMCServerManager.js
  */
 const consoleTitle = '[/app/common/myMCLauncher.js]';
 const wrap = require('minecraft-wrap');    //v1.3.0
@@ -14,13 +16,16 @@ const byteSize = require('byte-size'); //bytes 轉 MB
 class myMCLauncher {
 
     /**
-     * @param options                       MC伺服器設定值
-     * @param options.server_id             伺服器ID
+     * @param options                                      MC伺服器設定值
+     * @param options.server_id                            伺服器ID
      * @param {object} options.serverDir                   伺服器目錄物作
-     * @param {object} options.serverDir.appFolderPath     APP程式目錄
+     * @param {string} options.serverDir.jarFilePath       JAR檔案路徑
+     * @param {string} options.serverDir.jarFolderPath     JAR存放目錄
+     * @param {string} options.serverDir.appFolderPath     APP程式目錄
      * @param {string} options.serverDir.rootFolderPath    伺服器父層root目錄
      * @param {string} options.serverDir.serverFolderPath  伺服器目錄
      *
+     * @param options.server                類型,eg: Vanilla
      * @param options.version               版本,eg: 1.13.2
      * @param options.motd                  x
      * @param options.server_port           x
@@ -39,18 +44,24 @@ class myMCLauncher {
      */
     constructor(options) {
 
-        this.version = options.version;
-        this.server_id = options.server_id;
+        this.server = options.server;          //伺服器類型
+        this.version = options.version;        //伺服器版本
+        this.server_id = options.server_id;    //伺服器ID
 
-        this.consoleTitle = consoleTitle + `[${this.server_id}][${this.version}]`;
+        this.consoleTitle = consoleTitle + `[${this.server_id}][${options.server}-${this.version}]`;
 
         this.options = options;  //MC伺服器設定值
 
-        //PS: 建立伺服器啟動
-        this.jarFile = path.join(`${options.serverDir.jarFolderPath}`, `${this.version}.jar`);   //MC伺服器jar
-        this.serverDir = `${options.serverDir.serverFolderPath}`;                  //伺服器檔案目錄
-        this.Server = new wrap.WrapServer(this.jarFile, this.serverDir);           //PS: 建立伺服器啟動
+        //PS: 取伺服器JAR檔案路徑
+        //this.jarFile = path.join(`${options.serverDir.jarFolderPath}`, `${this.version}.jar`);   //MC伺服器jar (v1.1.0以前)
+        this.jarFile = options.serverDir.jarFilePath;                     //MC伺服器jar (v1.2.0)
+        this.serverDir = `${options.serverDir.serverFolderPath}`;         //伺服器檔案目錄
 
+        console.log(this.consoleTitle, '>'.repeat(50));
+        console.log(this.consoleTitle, 'jarFile:', this.jarFile);
+        console.log(this.consoleTitle, 'serverDir:', this.serverDir);
+
+        this.Server = new wrap.WrapServer(this.jarFile, this.serverDir);  //PS: 建立伺服器啟動
         this.isRunning = false;   //伺服器是否執行中
 
         //預設 server.properties 欄位值

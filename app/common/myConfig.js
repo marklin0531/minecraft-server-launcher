@@ -1,36 +1,102 @@
+/**
+ * 設定檔
+ *
+ * call: /index.js 必需優先載入
+ */
 const consoleTitle = '[/app/config.js]';
 const {app, BrowserWindow, Menu, ipcMain, ipcRenderer} = require('electron');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 const I18n = require('i18n-2');                            //https://www.npmjs.com/package/i18n
+const log = require('electron-log');                       //Log
 const {is} = require('electron-util');                     //相關好用的函式庫 https://github.com/sindresorhus/electron-util
 const {autoUpdater} = require('electron-updater');         //PS: 以Github當升級來源-範本: https://github.com/iffy/electron-updater-example
 const myAutoUpdater = require('./myAutoUpdater');          //檢測升級檔
 const myMachineResource = require('./myMachineResource');  //取主機資源
 const MyDB = require('./myDb');                            //初始化資料庫
 const myDate = require('./myDate');                        //時間函式
+const myString = require('./myString');                    //字串函式
+const mySecurity = require('./mySecurity');                //安全函式
 const openAboutWindow = require('about-window').default;   //自訂 [關於]
-const pkg = require('../../package.json');                 //package
 const isOnline = require('is-online');                     //網路連線狀態: https://www.npmjs.com/package/is-online
 const fetch = require('electron-fetch').default;           //https://www.npmjs.com/package/electron-fetch
-const appVersion = app.getVersion();                       //當前使用的版本
+const pkg = require('../../package.json');                 //package
+
+const isDev = is.development;                              //開發與正式環境偵測
 const apiurl = pkg.apiurl;                                 //線上訊息API
+const appVersion = app.getVersion();                       //當前使用的版本
+const appPath = app.getAppPath();                          //程式啟動目錄
+const userDataPath = app.getPath('userData');        //PS：使用個人目錄來放存
+const jarFolderPath = path.join(`${isDev ? appPath : userDataPath}`, 'server');  //MC伺服器JAR檔案存放目錄
 
 
-//region 主視窗設定參數
-const width = 1280;
-const height = 720;
+//region 全域變數
 
+global.isDev = isDev;                   //開發與正式環境偵測
+global.appPath = appPath;               //程式啟動目錄
+global.userDataPath = userDataPath;     //PS：使用個人目錄來放存
+global.jarFolderPath = jarFolderPath;   //MC伺服器JAR檔案存放目錄
+
+let locales = ['zh-TW'];   //en-US: 英文, zh-TW: 繁體
+global.locales = locales;
+global.i18n = null;              //Object - 多國語系
+global.config = {};              //Object - config.json
+global.Setting = {};             //Object - 偏好設定 PS: myDb.js getSetting() 設定給global
+global.BrowserWindows = [];      //PS：ipc Renderer溝通用,記錄視窗物件: {name:'xxx', id: 0}
+
+global.isNetworkOnline = false;  //網路是否連線
+global.isFindJavaHome = false;   //系統內是否有安裝 java
+
+global.MyDB = null;              //DB操作
+global.machineResource = null;   //取主機資源
+
+global.serverLaunchers = null;   //PS: 記錄每台伺服器啟動器實例 (/app/common/myMCServerManager.js => serverLaunchers())
+
+//endregion
+
+
+//region Log設定
+
+//log.transports.console.level = false;  //不輸出
+// 日志大小，默认：1048576（1M），达到最大上限后，备份文件并重命名为：main.old.log，有且仅有一个备份文件
+//log.transports.file.maxSize = 1048576;
+
+// 日誌檔名，默認：main.log
+const logFileName = 'latest.log';
+log.transports.file.fileName = logFileName;  //設定Log檔名
+
+//PS: 開發環境
+let logFilePath = path.join(`${isDev ? appPath : userDataPath}`, 'logs', `${logFileName}`);  //AP目錄下的檔案路徑
+log.transports.file.resolvePath = () => logFilePath;
+const logFile = log.transports.file.getFile();  //取得Log檔寫入的路徑
+
+console.log = log.log;  //PS: 替換 console 的輸出
+console.log('>'.repeat(100));
+console.log(consoleTitle, 'global.isDev:', global.isDev);
+console.log(consoleTitle, 'global.appPath:', global.appPath);
+console.log(consoleTitle, 'global.userDataPath:', global.userDataPath);
+//console.log(consoleTitle, 'logFile:', logFile);
+
+//endregion
+
+//region 參數設定
+const width = 1280;   //主視窗寬
+const height = 720;   //主視窗高
 const isEnableDevTools = true;  //是否可啟用開發者工具
 
 //是否顯示開發者工具
 let isShowDevTools = {
-    winMain: false,      //主視窗
-    menu: false,         //選單
-    form_Server: false,  //表單-新增/修改 MC伺服器
-    form_Map: false,     //表單-新增/修改 MC伺服器地圖
-    form_Log: false,     //表單-顯示 MC伺服器Log
-    form_Friends: false  //表單-好友管理
+    menu: false,          //選單是否顯示開發工具項目
+
+    index: false,            //主視窗
+    form_friends: false,     //表單-好友管理
+    form_map_list: false,    //表單-地圖下載清單
+    form_preference: false,  //表單-偏好設定
+    form_server_jar: false,
+
+    form_setting_server: false,       //表單-新增/修改 MC伺服器
+    form_setting_server_map: false,   //表單-新增/修改 MC伺服器地圖
+    form_view_server_log: false,      //表單-顯示 MC伺服器Log
 }
 // isShowDevTools.winMain = true;
 // isShowDevTools.menu = true;
@@ -38,14 +104,54 @@ let isShowDevTools = {
 // isShowDevTools.form_Map = true;
 // isShowDevTools.form_Log = true;
 // isShowDevTools.form_Friends = true;
+// isShowDevTools.form_Map_list = true;
 
 //endregion
 
+//region Renderer 彼此溝通
+
+//PS: 初次使用: ipcManOpenWindows.js
+//    const winName = 'form_map_list';        //命名-視窗名稱
+//    let childWin = new BrowserWindow();     //建立視窗
+//    const winid = childWin.webContents.id;  //取得視窗ID
+//    browserWindows.add(winName, winid);     //註冊視窗名稱與ID
+//
+//PS: Renderer互相溝通可以在 html 內使用如下語法
+//  let webContentsId = browserWindows.find('form_setting_server_map').id;  //取得已註冊的視窗名稱與ID
+//  ipcRenderer.sendTo(webContentsId, 'load', {server_id});   //透過ID與 Renderer IPC溝通
+//
+
+let browserWindows = {
+    list: function () {
+        return global.BrowserWindows;
+    },
+    add: function (name, id) {
+
+        let _win = this.find(name);
+        if (!_win) {
+            global.BrowserWindows.push({name, id})
+        } else {
+            _win.id = id;
+        }
+
+        return _win;
+    },
+    find: function (name) {
+        let _win = global.BrowserWindows.find((item, idx) => {
+            return item.name === name;
+        });
+        return _win;
+    }
+}
+
+//endregion Renderer 彼此溝通
 
 /**
  * 檢測網路是否連線
  *
  * @return {Promise<*>}
+ *
+ * call: loadOnlineConfig()
  */
 let isNetworkOnline = async () => {
     let _isOnline = await isOnline({timeout: 3000});
@@ -54,7 +160,7 @@ let isNetworkOnline = async () => {
 }
 
 /**
- * 比較版號 是否 新版本 > 當前版本
+ * 比較版號 是否 新版本 > 當前版本 - ok
  *
  * @param newVer      新版本
  * @param oldVer      當前版本
@@ -68,10 +174,39 @@ let versionCompare = (newVer, oldVer) => {
     let newVer2 = newVer.split('.').map((item) => item.padStart(2, '0')).join('.');
     let oldVer2 = oldVer.split('.').map((item) => item.padStart(2, '0')).join('.');
 
-    let isNewVer = newVer2 > oldVer2;
+    let hasNewVer = newVer2 > oldVer2;
     //console.log(consoleTitle2, newVer2, '>', oldVer2, '=', newVer2 > oldVer2);
 
-    return isNewVer;
+    return hasNewVer;
+
+}
+
+
+/**
+ * 檢測 JAR檔是否已存在 - ok
+ *
+ * call: loadOnlineConfig()
+ */
+let serverVersionsCheckFileExist = () => {
+
+    let consoleTitle2 = consoleTitle + '[serverVersionsCheckFileExist]';
+
+    console.log(consoleTitle2, '開始檢測 JAR檔案是否已下載...');
+
+    global.config.versions.forEach((item, idx) => {
+        //console.log(consoleTitle2, item);  //Object: {s: 'Vanilla', v: '1.16.5'}
+
+        item._id = idx;
+
+        const _jarFilePath = path.join(`${global.jarFolderPath}`, `${item.s}-${item.v}.jar`);
+        //console.log(consoleTitle2, '_jarFilePath:', _jarFilePath);
+        item.jar = _jarFilePath;
+
+        let isExists = fs.existsSync(_jarFilePath);
+        item.hasJar = isExists;
+
+    });
+    //console.log(consoleTitle2, 'global.config.versions:', global.config.versions);
 
 }
 
@@ -84,86 +219,109 @@ let loadOnlineConfig = async () => {
     let sdate = new Date();
 
     //------------
-    //PS: 下載線上的設定檔
+    //PS: 設定檔
     let configFile = `config.json`;   //設定檔檔名
-    let configUrl = `${apiurl}/${configFile}?t=${myDate.timestamp()}`;
-    let configFilePath = null;        //設定檔存放路徑
-    let configDefaultFilePath = path.join(`${app.getAppPath()}`, `${configFile}`);  //AP目錄下的檔案路徑
-
-    //PS: 開發環境
-    if (is.development) {
-        configFilePath = path.join(`${app.getAppPath()}`, `${configFile}`);  //AP目錄下的檔案路徑
-    } else {
-        const userDataPath = app.getPath('userData');  //PS：使用個人目錄來放存
-        configFilePath = path.join(`${userDataPath}`, `${configFile}`);     //檔案路徑
-    }
+    let configUrl = `${apiurl}/${configFile}?t=${myDate.timestamp()}`;  //下載網址
+    let configFilePath = path.join(`${isDev ? appPath : userDataPath}`, `${configFile}`);  //設定檔存放路徑
+    let configDefaultFilePath = path.join(`${appPath}`, `${configFile}`);  //AP目錄下的檔案路徑
+    console.log(consoleTitle2, 'configUrl:', configUrl);
     console.log(consoleTitle2, 'configFilePath:', configFilePath);
+    console.log(consoleTitle2, 'configDefaultFilePath:', configDefaultFilePath);
 
     //------------
-    let localConfig = null;  //預設檔內容
-
     //PS: 判斷是否存在本機的 userData 目錄下的 config.json (預設是不會有此檔案，需由下方下載後才有)
     let isExistConfigFile = fs.existsSync(configFilePath);
-    if (!isExistConfigFile) {  //不存在
-        localConfig = fs.readFileSync(configDefaultFilePath, {encoding:'utf-8'}); //改讀取 AP目錄下的檔案路徑
-    } else {
-        localConfig = fs.readFileSync(configFilePath, {encoding:'utf-8'});
-    }
-    //------------
+    let localConfig = fs.readFileSync(isExistConfigFile ? configFilePath : configDefaultFilePath, {encoding: 'utf-8'}); //改讀取 AP目錄下的檔案路徑
+    //console.log(consoleTitle2, 'localConfig:', localConfig);  //Object
+
     //PS: 讀取預設檔 - 寫入全域變數
-    //console.log(consoleTitle2, 'localConfig:', localConfig);
     localConfig = JSON.parse(localConfig);       //字串轉JSON
     localConfig.thisAppVersion = appVersion;     //當前使用的版本
-    localConfig.isNewVer = versionCompare(localConfig.latest, appVersion); //比對版號是否有新版本: true=有新版本
+    localConfig.hasNewVer = versionCompare(localConfig.latest, appVersion); //比對版號是否有新版本: true=有新版本
     localConfig.downloadUrl = pkg.downloadurl;   //下載的頁面
     global.config = localConfig;                 //放入全域
 
     //------------
-    //PS: 網路連線中
-    if (await isNetworkOnline()) {
+    //PS: 網路連線中才下載
+    let isNOnline = await isNetworkOnline();
+    //isNOnline = false;  //PS: debug
+    if (isNOnline) {
 
-        fetch(configUrl)
-            .then(res => res.json())
-            .then(onlineConfig => {
+        await (new Promise((resolve, reject) => {
+            fetch(configUrl)
+                .then(res => res.json())
+                .then(onlineConfig => {
 
-                //console.log(consoleTitle2, onlineConfig);
-                //PS: Save to /config.json
-                fs.writeFile(configFilePath, JSON.stringify(onlineConfig, null, 4), function (err) {
-                    if (err) throw err;
+                    //console.log(consoleTitle2, onlineConfig);
+                    //PS: Save to /config.json
+                    fs.writeFile(configFilePath, JSON.stringify(onlineConfig, null, 4), function (err) {
+                        if (err) {
+                            console.error(consoleTitle2, err);
+                            return resolve(null);
+                            //throw err;
+                        }
 
-                    console.log(consoleTitle2, 'Saved! =>', configFilePath);
+                        console.log(consoleTitle2, 'Saved! =>', configFilePath);
 
-                    let spendSecTimes = myDate.calculatorRunTimes(sdate).milliseconds;  //計算花費秒數
-                    console.log(consoleTitle2, '=== End', new Date(), ` => 花費: ${spendSecTimes} 毫秒`);
+                        let spendSecTimes = myDate.calculatorRunTimes(sdate).milliseconds;  //計算花費秒數
+                        console.log(consoleTitle2, `下載config檔花費: ${spendSecTimes} 毫秒`);
 
-                    //PS: 寫入全域變數
-                    onlineConfig.thisAppVersion = appVersion;     //當前使用的版本
-                    onlineConfig.isNewVer = versionCompare(onlineConfig.latest, appVersion); //比對版號是否有新版本: true=有新版本
-                    onlineConfig.downloadUrl = pkg.downloadurl;   //下載的頁面
-                    global.config = onlineConfig;                 //放入全域
-                    //console.log(consoleTitle2, 'global.config:', global.config);
+                        //PS: 寫入全域變數
+                        onlineConfig.thisAppVersion = appVersion;     //當前使用的版本
+                        onlineConfig.hasNewVer = versionCompare(onlineConfig.latest, appVersion); //比對版號是否有新版本: true=有新版本
+                        onlineConfig.downloadUrl = pkg.downloadurl;   //下載的頁面
+                        global.config = onlineConfig;                 //放入全域
+                        //console.log(consoleTitle2, 'global.config:', global.config);
 
-                });
+                        return resolve(true);
 
-            })
-            .catch(err => {
-                console.error(consoleTitle2, err);
-            })
+                    });
+
+                })
+                .catch(err => {
+                    console.error(consoleTitle2, err);
+                    return resolve(null);
+                })
+        }));
 
     } else {
         console.log(consoleTitle2, '網路未連線,無法下載 config.json =>', configUrl);
     }
 
+    //------------
+    //PS: 檢查 MC Version Jar檔案是否存在
+    serverVersionsCheckFileExist();
+    //------------
+
 }
 
 
 /**
- * 支援的多國語系
- * en-US: 英文
- * zh-TW: 繁體
+ * 註冊 多國語系
+ * PS: 只載入語系資料，預設使用繁體中文
+ *
+ * @return {Promise<void>}
  */
-let locales = ['zh-TW'];
-global.locales = locales;
+let regLocale = async () => {
+
+    let consoleTitle2 = consoleTitle + '[regLocale]';
+
+    const i18n = new I18n({
+        extension: '.json',
+        defaultLocale: 'zh-TW',   //預設繁體
+        locales: locales,   //['en-US', 'zh-TW'],
+        directory: path.join(appPath, 'app', 'locales')
+    });
+
+    global.i18n = i18n;
+    //console.log(consoleTitle2, 'global.i18n:', global.i18n);
+
+    //let locale = i18n.getLocale()  //取當前語系
+    //i18n.setLocale('zh-TW')     //切換語系-繁體
+    //i18n.setLocale('en-US')     //切換語系-英文
+    //console.log('Hello:', i18n.__('Hello'), i18n.__('Marge'));
+
+}
 
 
 /**
@@ -183,8 +341,11 @@ let regMenu = async () => {
         //role: 'about',
         label: i18n.__('Menu.About'),
         click: function (item, focusedWindow) {
-            let icon_path = path.join(app.getAppPath(), 'build', 'icons', '256x256.png');
-            console.log('icon_path:', icon_path);
+
+            let icon_path = path.join(appPath, 'build', 'icons', '256x256.png');
+            //console.log('icon_path:', icon_path);
+
+            //PS: https://www.npmjs.com/package/about-window
             openAboutWindow({
                 win_options: {
                     width: 500,
@@ -192,11 +353,12 @@ let regMenu = async () => {
                 },
                 icon_path: icon_path,
                 product_name: pkg.description,
-                description: `作者: ${pkg.author}`,
+                description: `作者: ${pkg.author} \n\n[Github 原始碼] - 請點擊上方的LOGO圖示進入`,
                 homepage: pkg.homepage,
                 bug_report_url: pkg.bugs,
                 bug_link_text: `錯誤回報`,
-                license: pkg.license
+                license: pkg.license,
+                //copyright: '版權所有: xxx'  //會取代 licennse
                 //use_version_info: true
             });
         }
@@ -236,7 +398,7 @@ let regMenu = async () => {
         label: i18n.__('Menu.Preference') + '...',
         click: function (item, focusedWindow) {
             //開啟視窗
-            ipcMain.emit('openwin_form_preference', this, {});
+            ipcMain.emit('form_preference', this, {});
         }
     }
 
@@ -356,9 +518,12 @@ module.exports = {
     width,
     height,
 
+    browserWindows,
+
     appVersion,
     isNetworkOnline,
     loadOnlineConfig,
+    serverVersionsCheckFileExist,
 
     /**
      * AP 程式目錄
@@ -366,16 +531,11 @@ module.exports = {
      * call: /app/common/ipcManOpenWindows.js
      */
     appFolderPath: () => {
-        return path.join(app.getAppPath(), 'app');  //eg: /Users/marge/minecraft/ServerLauncher + '/' + app
+        return path.join(appPath, 'app');  //eg: /Users/marge/minecraft/ServerLauncher + '/' + app
     },
 
     isEnableDevTools,
     isShowDevTools,
-
-    isDev: () => {
-        global.isDev = is.development;          //開發與正式環境偵測
-        return global.isDev;
-    },
 
     /**
      * 找尋系統內是否有安裝 java
@@ -396,34 +556,15 @@ module.exports = {
 
     },
 
-    //支援的 多國語系 清單
+    /**
+     * 支援的 多國語系 清單
+     */
     locales,
 
     /**
-     * 註冊 多國語系
-     * PS: 只載入語系資料，預設使用繁體中文
+     * 註冊 多國語系 - PS: 只載入語系資料，預設使用繁體中文
      */
-    regLocale: async () => {
-
-        let consoleTitle2 = consoleTitle + '[regLocale]';
-
-        const i18n = new I18n({
-            extension: '.json',
-            defaultLocale: 'zh-TW',   //預設繁體
-            locales: locales,   //['en-US', 'zh-TW'],
-            directory: path.join(app.getAppPath(), 'app', 'locales')
-        });
-
-        global.i18n = i18n;
-        //console.log(consoleTitle2, 'global.i18n:', global.i18n);
-
-        //let locale = i18n.getLocale()  //取當前語系
-        //i18n.setLocale('zh-TW')     //切換語系-繁體
-        //i18n.setLocale('en-US')     //切換語系-英文
-        //console.log('Hello:', i18n.__('Hello'), i18n.__('Marge'));
-
-    },
-
+    regLocale,
 
     /**
      * 初始化 資料庫
@@ -531,7 +672,7 @@ module.exports = {
         let consoleTitle2 = consoleTitle + '[getPreference]';
         console.log(consoleTitle2);
 
-        const Setting = global.Setting;
+        const Setting = global.Setting;    //Object PS: myDb.js 設定
         console.log(consoleTitle2, 'Setting:', Setting);
 
         return {
@@ -539,6 +680,5 @@ module.exports = {
         }
 
     }
-
 
 }

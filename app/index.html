@@ -30,8 +30,7 @@
         </div>
         <div class="col-sm-6">
             <div class="d-grid gap-1 d-flex justify-content-end">
-                <!--                <a href="javascript:void(0);" class="btn btn-info" onclick="RenderList();">重載清單</a>-->
-                <!--                <button type="button" class="btn btn-warning" onclick="btn_server_create();">下載地圖</button>-->
+                <!--                <a href="javascript:void(0);" class="btn btn-info" onclick="load();">重載清單</a>-->
                 <button type="button" class="btn btn-warning" onclick="btn_server_jar();">伺服器版本管理</button>
                 <button type="button" class="btn btn-warning" onclick="btn_friends();">好友管理</button>
                 <button type="button" class="btn btn-warning" onclick="btn_server_create();">新增伺服器</button>
@@ -74,11 +73,18 @@
 
                     {{^isRunning}}
                        <!--伺服器未啟動-->
+                       {{^hasJar}}
+                       <button id="btnServerStart{{server_id}}" class="btn btn-primary" type="button" onclick="btn_server_download('{{server_id}}');">
+                          下載伺服檔
+                       </button>
+                       {{/hasJar}}
 
                        {{#isNetworkOnline}}
+                       {{#hasJar}}
                        <button id="btnServerStart{{server_id}}" class="btn btn-primary" type="button" onclick="btn_server_start('{{server_id}}');">
                           啟動
                        </button>
+                       {{/hasJar}}
                        {{/isNetworkOnline}}
 
                        <a href="javascript:void(0);" class="btn btn-warning" onclick="btn_setting_server_map('{{server_id}}');">設定地圖</a>
@@ -105,39 +111,16 @@
 </footer>
 </body>
 </html>
-
+<script src="./initRenderer.js"></script>
 <script>
-    let consoleTitle = '[/index.html]';
-    const {remote, ipcRenderer} = require('electron');
-    const {app, dialog} = remote;
-
-    //PS: 攔截錯誤送給 main process
-    window.onerror = function (error, url, line) {
-        ipcRenderer.send('errorInWindow', error, url, line);
-    };
-
-    let i18n = remote.getGlobal('i18n');  //多國語系轉換
-    //console.log('i18n:', i18n);
-    //console.log('Hello:', i18n.__('Hello'), i18n.__('Marge'));
-
-    const myElectron = remote.require('./common/myElectron');
-    const Mustache = require('mustache');  //樣版引擎 https://github.com/janl/mustache.js
-    const mydb = remote.getGlobal('MyDB');  //資料庫模組
-    const machineResource = remote.getGlobal('machineResource');  //取主機資源
-    const myMCServerManager = remote.require('./common/myMCServerManager');   //MC伺服器管理
-
+    let consoleTitle = '[/app/index.html]';
     //....................................................................................
-    //PS: Top訊息顯示
-    const config = remote.getGlobal('config');
-    const isNetworkOnline = remote.getGlobal('isNetworkOnline');
-    const isFindJavaHome = remote.getGlobal('isFindJavaHome');
-    //const isFindJavaHome = false;
+    //region Top訊息顯示
 
     let topNewsContainer = document.getElementById('topNewsContainer');
     let topNewsBody = document.getElementById('topNewsBody');
-    //console.log(consoleTitle, 'config:', config);
     //console.log(consoleTitle, 'topNewsContainer:', topNewsContainer);
-    //console.log(consoleTitle, 'config.isNewVer:', config.isNewVer);
+    //console.log(consoleTitle, 'config.hasNewVer:', config.hasNewVer);
 
     if (!isNetworkOnline) {
         topNewsContainer.style.display = 'block';
@@ -147,63 +130,34 @@
             topNewsContainer.style.display = 'block';
             topNewsBody.innerHTML = `請注意: 你的電腦環境必需安裝 java 才能執行此軟體唷!!`;
         } else {
-            if (config.isNewVer) {
+            if (config.hasNewVer) {
                 topNewsContainer.style.display = 'block';
-                topNewsBody.innerHTML = `<a href="${config.downloadUrl}" target="_blank">有新版本: ${config.latest} 請立即下載</a>`;
+                topNewsBody.innerHTML = `<a href="${config.downloadUrl}" target="_blank">發現新版本: ${config.latest} 點選此處進行下載</a>`;
             } else {
                 topNewsContainer.style.display = 'none';
             }
         }
     }
-
-    //....................................................................................
-    //PS: 複制文字到剪貼簿
-    let copyTextToClipboard = (text) => {
-        myElectron.copyTextToClipboard(text);
-        myElectron.showDialogMessage('Copy', `已將 ${text} 複制到剪貼簿囉`);
-    }
-
-    //....................................................................................
-    //PS: 粗估推算主機資源可啟動的伺服器數目 (1Server*1GB RAM)
-    let predictionCanStartServerTotal = () => {
-        let consoleTitle2 = consoleTitle + '[predictionCanStartServerTotal]';
-
-        let canStartServerTotal = Math.floor((machineResource.memInfo.freeMemMb - 300) / 1024);
-
-        //let msg = `根據電腦資源推算，建議最多啟動 ${canStartServerTotal}台伺服器`;
-        let msg = i18n.__('predictionCanStartServerTotal %d', canStartServerTotal);
-        if (canStartServerTotal < 1) {
-            //msg = `電腦資源不足，不建議啟動伺服器，以免當機`;
-            msg = i18n.__('predictionCanStartServerTotal_low');
-        }
-
-        document.getElementById('predictionCanStartServerTotal').innerHTML = msg;
-    }
-
+    //endregion
     //....................................................................................
     /**
      * 接收主進程(index.js)的訊息
      */
 
     //載入資料 - ok
-    //call: app/index.js
+    //call: app/index.js, /app/common/ipcManOpenWindows.js
     ipcRenderer.on('load', async (event, param1) => {
         //console.log(consoleTitle, '[ipcRenderer][load2] param1:', param1);
-        await RenderList();
-    });
-
-    //
-    ipcRenderer.on('ipcRenderer_RenderList', async (event, param1) => {
-        console.log(consoleTitle, '[ipcRenderer][ipcRenderer_RenderList]');
-        await RenderList();
+        await load();
     });
     //....................................................................................
     /**
      * 動態產生 - 伺服器清單HTML - ok
      */
-    let RenderList = async function () {
+    let serverList = [];
+    let load = async function () {
 
-        let consoleTitle2 = consoleTitle + '[RenderList]';
+        let consoleTitle2 = consoleTitle + '[load]';
         console.log(consoleTitle2);
 
         //console.log(consoleTitle2, 'i18n目前語系:', i18n.getLocale());
@@ -212,20 +166,38 @@
 
         //---------
         //PS: 取伺服器設定資料的清單
-        const serverList = await mydb.getServerList();
+        serverList = await mydb.getServerList();
 
         //PS: 設定背景圖
         let body_backgroundImage = '1.jpg';  //深色背景
         if (serverList.length > 0) body_backgroundImage = '1-opacity.png';  //淡色背景
         document.body.style.backgroundImage = `url('images/background/${body_backgroundImage}')`;
 
+        //PS: 伺服器清單資料處理
         for (let [idx, item] of serverList.entries()) {
+
+            console.log(consoleTitle2, 'item:', item);
+            let _server = item.server;
+            let _version = item.version;
 
             //=== PS: 伺服器初始化
             let mcServerManager = new myMCServerManager(item.server_id);  //建立伺服器管理實例
             let mcServerLauncher = await mcServerManager.server();   //取單一伺服器 MCLauncher instance實例
             console.log(consoleTitle2, `=== 建立單一實例 mcServerLauncher[${item.server_id}]:`, mcServerLauncher);
             //===
+
+            /**
+             * 2021-05-02 PS: 讀取伺服器jar路徑
+             */
+            let versions = config.versions;  //伺服器版本清單
+            let _thisVersion = versions.find(item => item.s===_server && item.v === _version);
+            console.log(consoleTitle2, '_thisVersion:', _thisVersion);
+
+            let hasJar = false;
+            if (_thisVersion) {
+                hasJar = _thisVersion.hasJar;
+            }
+            item.hasJar = hasJar;   //是否有安裝JAR檔
 
             item.isNetworkOnline = isNetworkOnline;  //網路是否連線
 
@@ -257,12 +229,40 @@
         document.getElementById('container1').innerHTML = rendered1;  //Render後的html放入Container
         //---------
 
-        //console.log(consoleTitle2, 'done');
-
     }
 
     //....................................................................................
     //region 單一伺服器管理
+
+    //BUTTON: 下載伺服檔 - ok
+    let btn_server_download = async (server_id) => {
+
+        let consoleTitle2 = consoleTitle + '[btn_server_download]';
+        console.log(consoleTitle2);
+        //console.log(consoleTitle2, 'server_id:', server_id, ',serverList:', serverList);
+
+        //PS: Server List
+        let _serverItem = serverList.find(item => item.server_id.toString() === server_id.toString());
+        console.log(consoleTitle2, '_serverItem:', _serverItem);
+        if (_serverItem) {
+            let _server = _serverItem.server;
+            let _version = _serverItem.version;
+
+            //PS: config.versions
+            let _versionItem = config.versions.find(item => item.s === _server && item.v === _version);
+            if (_versionItem) {
+
+                //PS: 下載Jar檔
+                console.log(consoleTitle2, '_id:', _versionItem._id);
+                let installResult = ipcRenderer.sendSync('ipcMain_jar_install', {_id: _versionItem._id});   //PS: 傳遞給 [主進程]
+                console.log(consoleTitle2, 'installResult:', installResult);
+
+                if (installResult) await load();  //重新載入
+
+            }
+        }
+
+    }
 
     //BUTTON: 啟動伺服器 - ok
     let btn_server_restart = async (server_id) => {
@@ -315,7 +315,7 @@
         console.log(consoleTitle2);
 
         //呼叫 [主進程]
-        ipcRenderer.send('openwin_setting_server_map', {server_id});
+        ipcRenderer.send('form_setting_server_map', {server_id});
 
     }
 
@@ -325,7 +325,7 @@
 
     //BUTTON: 伺服器版本管理-表單 -
     let btn_server_jar = async () => {
-        ipcRenderer.send('openwin_form_server_jar', {});
+        ipcRenderer.send('form_server_jar', {});
     }
 
     //BUTTON: 好友管理-表單 - ok
@@ -333,7 +333,7 @@
         console.log(consoleTitle, '[btn_friends]');
 
         //呼叫 [主進程] 開啟 [好友管理表單] 視窗
-        ipcRenderer.send('openwin_friends', {});
+        ipcRenderer.send('form_friends', {});
     }
 
     //BUTTON: 新增伺服器-表單 - ok
@@ -342,15 +342,9 @@
         console.log(consoleTitle, '[btn_server_create]');
 
         //呼叫 [主進程] 開啟 [新增伺服器表單] 視窗
-        ipcRenderer.send('openwin_setting_server', {server_id});
+        ipcRenderer.send('form_setting_server', {server_id});
 
     }
     //endregion
-    //....................................................................................
-    // (async () => {
-    //
-    //     await RenderList();  //Start
-    //
-    // })();
     //....................................................................................
 </script>

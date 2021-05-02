@@ -37,7 +37,7 @@
               <th scope="col">執行目錄</th>
               <th scope="col" style="text-align:right;">
                   <button type="button" class="btn btn-sm btn-warning" onclick="btn_create_map_folder();">新增地圖目錄</button>
-                  <button type="button" class="btn btn-sm btn-dark col-3" onclick="btn_close();">關閉</button>
+                  <button type="button" class="btn btn-sm btn-info col-3" onclick="btn_close();">關閉</button>
               </th>
             </tr>
           </thead>
@@ -52,13 +52,13 @@
               </td>
               <td colspan="2">
                  {{#removeable}}
-                    <button type="button" class="btn btn-sm btn-danger col-3" id="btn_remove_map_folder_{{_id}}" onclick="btn_remove_map_folder('{{folder}}')">刪除</button>
+                    <button type="button" class="btn btn-sm btn-danger col-2" id="btn_remove_map_folder_{{_id}}" onclick="btn_remove_map_folder('{{folder}}')">刪除</button>
                  {{/removeable}}
                  {{#clearable}}
-                    <button type="button" class="btn btn-sm btn-warning col-3" onclick="btn_clear_map_folder('{{folder}}')">清空</button>
+                    <button type="button" class="btn btn-sm btn-warning col-2" onclick="btn_clear_map_folder('{{folder}}')">清空</button>
                  {{/clearable}}
-                 <button type="button" class="btn btn-sm btn-primary col-3" onclick="btn_open_map_folder('{{folder}}');">開啟</button>
-                 <!--<button type="button" class="btn btn-sm btn-primary col-3" onclick="btn_open_map_folder('{{folder}}');">安裝</button>-->
+                 <button type="button" class="btn btn-sm btn-primary col-2" onclick="btn_open_map_folder('{{folder}}');">開啟</button>
+                 <button type="button" class="btn btn-sm btn-warning" onclick="btn_map_download('{{folder}}');">地圖下載</button>
               </td>
             </tr>
           {{/worldFolders}}
@@ -72,37 +72,20 @@
 
 </body>
 </html>
-
+<script src="./initRenderer.js"></script>
 <script>
-    let consoleTitle = '[/form_settinng_server_map.html]';
-    const path = require('path');
-    const {remote, ipcRenderer} = require('electron');
-    const {app, dialog} = remote;
-
-    //PS: 攔截錯誤送給 main process
-    window.onerror = function (error, url, line) {
-        ipcRenderer.send('errorInWindow', error, url, line);
-    };
-
-    const Mustache = require('mustache');  //樣版引擎 https://github.com/janl/mustache.js
-    const enums = remote.require('./common/enums');
-    const myElectron = remote.require('./common/myElectron');
-    const mydb = remote.getGlobal('MyDB');  //資料庫模組
-    const myMCServerManager = remote.require('./common/myMCServerManager');
-
-
+    let consoleTitle = '[/app/form_settinng_server_map.html]';
     //....................................................................................
     /**
      * 接收主進程(index.js)的訊息
      */
 
     //載入伺服器資料到表單 - ok
-    //call: app/index.js => ipcMain.on('openwin_form_server')
+    //call: /app/index.js => ipcMain.on('form_form_server')
+    //call: form_map_list.html
     ipcRenderer.on('load', async (event, param1) => {
-
-        //console.log(consoleTitle, '[ipcRenderer][load2] param1:', param1);
-        await load_server(param1.server_id);
-
+        console.log(consoleTitle, '[ipcRenderer][load] param1:', param1, ', event:', event);
+        await load(param1.server_id);
     });
 
     //....................................................................................
@@ -120,9 +103,9 @@
     let SERVER_worldFolders = [];  //地圖目錄清單
     let mcServerManager = null;    //建立伺服器管理實例
 
-    let load_server = async (server_id) => {
+    let load = async (server_id) => {
 
-        let consoleTitle2 = consoleTitle + '[load_server]';
+        let consoleTitle2 = consoleTitle + '[load]';
         console.log(consoleTitle2, 'server_id:', server_id);
 
         if (!server_id) return;    //參數錯誤
@@ -139,15 +122,12 @@
             //---------
             //PS: 取單一伺服器 instance實例
             mcServerManager = new myMCServerManager(SERVER_ID);  //建立伺服器管理實例
-            //let mcServerLauncher = await mcServerManager.server();   //取單一伺服器 instance實例
-            //console.log(consoleTitle2, `=== 建立單一實例 mcServerLauncher[${SERVER_ID}]:`, mcServerLauncher);
-            //---------
 
             //PS: 讀取 [伺服器目錄下的] - [地圖目錄] 清單
             SERVER_worldFolders = await mcServerManager.getWorldFolders();  //[{folder: 'world', hasFiles: false, selected: true, removeable: false}]
             SERVER_FolderPath = mcServerManager.serverFolderPath;
 
-
+            //---------
             //PS: 伺服器清單HTML
             await RenderList();
 
@@ -185,6 +165,13 @@
     }
 
     //....................................................................................
+    //region Buttons
+
+    //PS: 地圖下載 - 開啟popup頁面 - ok
+    let btn_map_download = async (map_folder) => {
+        let selected_worldFolder = SERVER_worldFolders.find(item => item.folder === map_folder);  //PS: 過濾出點擊的目錄資料
+        ipcRenderer.send('form_map_list', {SERVER_DATA, SERVER_FolderPath, selected_worldFolder, map_folder});
+    }
 
     //PS: 變更地圖 - ok
     let btn_select_map_folder = async(folderName, _id) => {
@@ -211,7 +198,7 @@
                 mcServerManager.createMapFolder(available_folder);
 
                 //PS: Reload
-                await load_server(SERVER_ID);
+                await load(SERVER_ID);
             }
 
         }
@@ -242,7 +229,7 @@
             });
             if (btnClickIdx === 0) {
                 mcServerManager.removeMapFolder(folderName);  //PS: 刪除地圖目錄
-                await load_server(SERVER_ID);  //PS: Reload
+                await load(SERVER_ID);  //PS: Reload
             }
 
         }
@@ -281,7 +268,7 @@
                 mcServerManager.createMapFolder(folderName);
 
                 //PS: Reload
-                await load_server(SERVER_ID);
+                await load(SERVER_ID);
             }
 
         }
@@ -302,29 +289,27 @@
     }
 
     //PS: 選擇目錄 - 目前沒用到
-    let btn_map_folder_picker = async () => {
-
-        let options = {title: '選擇地圖目錄', defaultPath: SERVER_FolderPath, properties: ["openDirectory"]}
-        let {filePaths, canceled} = await dialog.showOpenDialog(options);
-
-        console.log('btn_folder_picker:', canceled, filePaths);
-
-        if (!canceled) {
-            alert(filePaths[0]);
-        }
-
-    }
+    // let btn_map_folder_picker = async () => {
+    //
+    //     let options = {title: '選擇地圖目錄', defaultPath: SERVER_FolderPath, properties: ["openDirectory"]}
+    //     let {filePaths, canceled} = await dialog.showOpenDialog(options);
+    //
+    //     console.log('btn_folder_picker:', canceled, filePaths);
+    //
+    //     if (!canceled) {
+    //         alert(filePaths[0]);
+    //     }
+    //
+    // }
 
 
     /**
      * 關閉視窗 - ok
      */
     let btn_close = () => {
-
-        ipcRenderer.send('ipcMain_RenderList', {s: 'btn_close', data: {}});   //PS: 傳遞給 [主進程]
-
         remote.getCurrentWindow().close();  //關閉自己
-
     }
+
+    //endregion
     //....................................................................................
 </script>

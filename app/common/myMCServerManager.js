@@ -2,25 +2,27 @@
  * 伺服器管理
  *
  * 2021-03-29 友
+ *
+ * call: /app/common/ipcManMCServer.js
+ * call: /app/initRenderer.js  (html 內會用到)
  */
 const consoleTitle = '[/app/common/myMCServerManager.js]';
 const electron = require('electron');
 const {app} = electron;
-const {is} = require('electron-util');
 const getPort = require('get-port');  //取可使用的埠號 - https://github.com/sindresorhus/get-port
 const fs = require('fs');
 const path = require('path');
-const rimraf = require('rimraf');
-const mkdirp = require('mkdirp');
+const rimraf = require('rimraf');   //移除目錄
+const mkdirp = require('mkdirp');   //建立目錄
 const myMCLauncher = require('./myMCLauncher');             //啟動器
 const myProgressBar = require('../common/myProgressBar');   //進度條
+const {isInt} = require('../common/mySecurity');            //安全函式
 
-
-const isInt = (value) => {
-    return !isNaN(value) && (function (x) {
-        return (x | 0) === x;
-    })(parseFloat(value))
-}
+//全域變數
+const userDataPath = global.userDataPath;
+const appPath = global.appPath;
+//console.log(consoleTitle, 'global.userDataPath:', global.userDataPath);
+//console.log(consoleTitle, 'global.appPath:', global.appPath);
 
 
 /**
@@ -32,7 +34,6 @@ class myMCServerManager {
 
         let consoleTitle2 = consoleTitle + '[constructor]';
 
-        this.isDev = is.development;             //開發環境
         this.server_id = server_id;              //伺服器ID
         this.serverKey = `server_${server_id}`;  //伺服器Key 名稱
 
@@ -40,6 +41,7 @@ class myMCServerManager {
         this.progressBarText = new myProgressBar.TextBar({parentWin: winMain, text: '執行'});  //文字型進度條
 
         //MC伺服器檔案存放目錄
+        this.jarFolderPath = null;      //eg: /Users/marge/data/NAS-HOME/minecraft/nodejs-dev/ServerLauncher/server
         this.appFolderPath = null;      //eg: /Users/marge/data/NAS-HOME/minecraft/nodejs-dev/ServerLauncher
         this.rootFolderPath = null;     //eg: /Users/marge/data/NAS-HOME/minecraft/nodejs-dev/ServerLauncher/server
         this.serverFolderPath = null;   //eg: /Users/marge/data/NAS-HOME/minecraft/nodejs-dev/ServerLauncher/server/56
@@ -60,31 +62,24 @@ class myMCServerManager {
 
         let consoleTitle2 = consoleTitle + '[getServerFolder]';
 
-        let userDataPath = app.getPath('userData');  //PS: 使用者的應用程式資料存放目錄 (package.json => name)
-        //console.log(consoleTitle2, 'userDataPath:', userDataPath);  //userDataPath: /Users/marge/Library/Application Support/minecraft-server-launcher
-
-        //開發環境
-        if (this.isDev) {
-            userDataPath = app.getAppPath();  //userDataPath: /Users/marge/data/NAS-HOME/minecraft/nodejs-dev/ServerLauncher
-        }
+        let _userDataPath = global.isDev ? appPath : userDataPath;   //app.getPath('userData');  //PS: 使用者的應用程式資料存放目錄 (package.json => name)
 
         //PS: 放入 this
-        //"/Applications/minecraft Server Launcher.app/Contents/Resources/app.asar/1.12.2.jar"
-        this.appFolderPath = `${app.getAppPath()}`; //AP 應用程式執行目錄,eg: /Applications/minecraft Server Launcher.app/Contents/Resources/app.asar
+        this.appFolderPath = `${appPath}`; //app.getAppPath() - AP 應用程式執行目錄,eg: /Applications/minecraft Server Launcher.app/Contents/Resources/app.asar
 
-        //打包後的路徑上二層
+        //PS: 打包後的路徑上二層
         if (this.appFolderPath.indexOf('asar') !== -1) {
             this.appFolderPath = path.join(this.appFolderPath, '../../');  //eg: /Applications/minecraft Server Launcher.app/Contents
         }
 
-        this.jarFolderPath = path.join(`${this.appFolderPath}`, 'server');     //存放伺服器Jar檔的目錄,eg: /Applications/minecraft Server Launcher.app/Contents/server
-        this.rootFolderPath = path.join(`${userDataPath}`, 'server');          //存放伺服器資料的主目錄
+        //TODO: v1.2.0 - jar 改放到 userDataPath 目錄
+        //this.jarFolderPath = path.join(`${this.appFolderPath}`, 'server');     //Deprecated-存放伺服器Jar檔的目錄,eg: /Applications/minecraft Server Launcher.app/Contents/server
+
+        this.jarFolderPath = global.jarFolderPath;         //存放伺服器Jar檔的目錄 (v1.2.0) myConfig.js 設定
+        this.rootFolderPath = path.join(`${_userDataPath}`, 'server');          //存放伺服器資料的主目錄
         this.serverFolderPath = path.join(`${this.rootFolderPath}`, `${this.server_id}`);  //存放每台伺服器資料的目錄
 
         //console.log(consoleTitle2, 'appFolderPath:', this.appFolderPath, ',jarFolderPath:', this.jarFolderPath, ',rootFolderPath:', this.rootFolderPath, ',serverFolderPath:', this.serverFolderPath);
-        //rootFolderPath: /Users/marge/data/NAS-HOME/minecraft/nodejs-dev/ServerLauncher/server
-        //serverFolderPath: /Users/marge/data/NAS-HOME/minecraft/nodejs-dev/ServerLauncher/server/12
-
         return {
             appFolderPath: this.appFolderPath,
             jarFolderPath: this.jarFolderPath,
@@ -95,29 +90,21 @@ class myMCServerManager {
     }
 
 
-    /**
-     * 取可安裝的 MC伺服器版本清單 - ok
-     *
-     * @return {Promise<void>}
-     */
-    static getVersionList() {
-
-        let consoleTitle2 = consoleTitle + `[getVersionList]`;
-        //let versions = require('../versions.json').versions;
-        let config = global.config;
-        let versions = config.versions;
-
-        //console.log(consoleTitle2, 'versions:', versions);
-
-        // let data = [];
-        // versions.forEach(item => {
-        //     //console.log(item.v);
-        //     data.push(`${item.s}-${item.v}`);
-        // })
-
-        return versions;
-
-    }
+    // /** Deprecated 2021-05-02
+    //  * 取可安裝的 MC伺服器版本清單 - ok
+    //  *
+    //  * @return {Promise<void>}
+    //  */
+    // static getVersionList() {
+    //
+    //     let consoleTitle2 = consoleTitle + `[getVersionList]`;
+    //
+    //     let config = global.config;
+    //     let versions = config.versions;
+    //     //console.log(consoleTitle2, 'versions:', versions);
+    //     return versions;
+    //
+    // }
 
 
     /**
@@ -440,10 +427,31 @@ class myMCServerManager {
         let consoleTitle2 = consoleTitle + `[${this.server_id}][getServerData]`;
 
         console.log(consoleTitle2, `DB - 取伺服器設定資料`);
-        let serverData = await global.MyDB.getServer(this.server_id);
+        let serverData = await global.MyDB.getServer(this.server_id);  //伺服器設定資料
+        let _server = serverData.server;    //伺服器類型: Vanilla
+        let _version = serverData.version;  //伺服器版本: 1.16.5
+
+        /**
+         * 2021-05-02 PS: 讀取伺服器jar路徑
+         */
+        let versions = global.config.versions;  //伺服器版本清單
+        let _thisVersion = versions.find(item => item.s === _server && item.v === _version);
+        //console.log(consoleTitle2, '_thisVersion:', _thisVersion);
+        /*_thisVersion: {
+          s: 'Vanilla',
+          v: '1.16.4',
+          _id: 1,
+          jar: 'C:\\Users\\marge\\AppData\\Roaming\\minecraft-server-launcher\\server\\Vanilla-1.16.4.jar',
+          hasJar: false
+        }*/
+        let jarFilePath = null;
+        if (_thisVersion) {
+            jarFilePath = _thisVersion.jar;
+        }
 
         //PS: 增加 [MC伺服器目錄] 到屬性內
         serverData.serverDir = {
+            jarFilePath: jarFilePath,
             jarFolderPath: this.jarFolderPath,
             appFolderPath: this.appFolderPath,
             rootFolderPath: this.rootFolderPath,
@@ -451,7 +459,6 @@ class myMCServerManager {
         };
 
         //console.log(consoleTitle2, `serverData:`, serverData);
-
         return serverData;
 
     }

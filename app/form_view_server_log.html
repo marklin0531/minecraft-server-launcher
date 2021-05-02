@@ -50,20 +50,11 @@
 <pre id="preElm"><output id="consoletext"></output></pre>
 </body>
 </html>
-
+<script src="./initRenderer.js"></script>
 <script>
-    let consoleTitle = '[/form_view_server_log.html]';
-    const {remote, ipcRenderer} = require('electron');
-
-    //PS: 攔截錯誤送給 main process
-    window.onerror = function (error, url, line) {
-        ipcRenderer.send('errorInWindow', error, url, line);
-    };
-
-    const myMCServerManager = remote.require('./common/myMCServerManager');   //MC伺服器管理
+    let consoleTitle = '[/app/form_view_server_log.html]';
 
     let consoletext = document.getElementById('consoletext');  //LOG輸出區
-
     //....................................................................................
     /**
      * 接收主進程(index.js)的訊息
@@ -159,7 +150,7 @@
                 }
 
                 //重新載入清單
-                ipcRenderer.send('ipcMain_RenderList', {data: {}});   //PS: 傳遞給 [主進程]
+                ipcRenderer.send('ipcMain_RenderList', {data: {}});   //PS: 傳遞給 [主進程] - /app/common/ipcManOpenWindows.js
             });
         } else {
             CLog(`伺服器已在執行中...`);

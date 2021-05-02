@@ -1,5 +1,7 @@
 /**
- * ipcMan 操作伺服器
+ * 註冊ipcMan事件 - 操作MC伺服器
+ *
+ * call: /app.js
  */
 const consoleTitle = '[/app/common/ipcManMCServer.js]';
 const {app, BrowserWindow, ipcMain} = require('electron');
@@ -16,7 +18,6 @@ const {
     getMachineResource,
     initDB,
     initLocale,
-    isDev,
     isEnableDevTools,
     isShowDevTools,
     locales
@@ -49,7 +50,7 @@ ipcMain.on('server_start', async (event, param1) => {
     if (isAdvance_Server_Start === 'true') {
 
         //PS: OPEN MC LOG
-        ipcMain.emit('openwin_view_server_log', event, {server_id});
+        ipcMain.emit('form_view_server_log', event, {server_id});
 
     } else {  //一般啟動
 

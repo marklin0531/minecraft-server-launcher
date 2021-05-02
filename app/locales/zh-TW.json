@@ -24,7 +24,8 @@
 		"Preference": "偏好設定",
 		"Friends": "好友管理",
 		"Console logs": "Console logs",
-		"ServerVersions": "安裝伺服器版本"
+		"ServerVersions": "安裝伺服器版本",
+		"MapDownload": "地圖下載"
 	},
 	"autoUpdater": {
 		"Disconnected Cannot Check for Updates": "網路未連線，無法進行檢查更新",

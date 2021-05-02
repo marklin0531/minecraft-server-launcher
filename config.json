@@ -1,5 +1,5 @@
 {
-    "date": "2021-04-18T02:09:28.000Z",
+    "date": "2021-05-02T02:09:28.000Z",
     "latest": "1.1.0",
     "news": [
         {
@@ -19,6 +19,10 @@
         },
         {
             "s": "Vanilla",
+            "v": "1.15.2"
+        },
+        {
+            "s": "Vanilla",
             "v": "1.14.2"
         },
         {
@@ -33,16 +37,191 @@
     "maps": [
         {
             "title": "麥塊空島生存",
-            "info": "從一塊泥土開局的麥塊空島生存《OneBlock》\n\n",
+            "description": "從一塊泥土開局的麥塊空島生存《OneBlock》<br><br>PS: 開啟 - 指令方塊",
             "author": "IJAMinecraft",
-            "url": "https://tedliou.com/archives/minecraft-oneblock/",
-            "download": "https://ijaminecraft.com/download/map/oneblock/IJAMinecrafts-OneBlock-1-16-4.zip",
+            "homepage": "https://ijaminecraft.com/map/oneblock/",
+            "tag": [
+                "生存",
+                "空島"
+            ],
+            "recommend": [
+                {
+                    "title": "遊戲介紹1",
+                    "url": "https://tedliou.com/archives/minecraft-oneblock/"
+                }
+            ],
+            "image": "https://marklin0531.github.io/api/minecraft-server-launcher/1.jpg",
+            "download": [
+                {
+                    "mode": "install",
+                    "url": "https://marklin0531.github.io/api/minecraft-server-launcher/maps/IJAMinecrafts-OneBlock-1-16-4.zip"
+                }
+            ],
+            "filesize": "1.4MB",
+            "players": "1人以上",
             "date": "2021-04-07",
             "server": "Vanilla",
             "version": [
-                "1.16.4",
-                "1.15.2",
-                "1.13.2"
+                "1.16.5",
+                "1.16.4"
+            ]
+        },
+        {
+            "title": "【媛媛製】1.16.1休閒小品地圖《派別大戰爭》",
+            "description": "媛媛帶來的第九張地圖 =派別大戰爭=",
+            "author": "媛媛",
+            "homepage": "https://www.youtube.com/channel/UC9A1upZ6Rk7Un-iHfGsW5xA",
+            "tag": [
+                "媛媛",
+                "戰爭",
+                "休閒小品"
+            ],
+            "recommend": [
+                {
+                    "title": "遊戲介紹1",
+                    "url": "https://forum.gamer.com.tw/C.php?bsn=18673&snA=185405"
+                }
+            ],
+            "image": "https://i.imgur.com/oTeaw1k.png",
+            "download": [
+                {
+                    "mode": "install",
+                    "url": "https://marklin0531.github.io/api/minecraft-server-launcher/maps/factionwar1.zip"
+                }
+            ],
+            "filesize": "4MB",
+            "players": "3人含以上",
+            "date": "2021-04-28",
+            "server": "Vanilla",
+            "version": [
+                "1.16.1"
+            ]
+        },
+        {
+            "title": "Skyblock4",
+            "description": "1個人的空島...",
+            "author": "DrTrog",
+            "homepage": "https://www.planetminecraft.com/project/skyblock-4",
+            "tag": [
+                "Skyblock",
+                "空島"
+            ],
+            "recommend": [],
+            "image": "https://static.planetminecraft.com/files/resource_media/screenshot/1850/skyblock-4-1545017884.png",
+            "download": [
+                {
+                    "mode": "install",
+                    "url": "http://download2329.mediafire.com/t2q69xqatvug/0p12gx4mft4j1f0/Skyblock+4.08.4.zip"
+                },
+                {
+                    "mode": "custom",
+                    "url": "http://download2329.mediafire.com/t2q69xqatvug/0p12gx4mft4j1f0/Skyblock+4.08.4.zip"
+                }
+            ],
+            "filesize": "37.2MB",
+            "players": "1人含以上",
+            "date": "2021-04-30",
+            "server": "Vanilla",
+            "version": [
+                "1.16.5"
+            ]
+        },
+        {
+            "title": "【坑爹直直走】極度坑爹的闖關地圖 v1",
+            "description": "易怒者勿玩...",
+            "author": "Howard",
+            "homepage": "https://forum.gamer.com.tw/C.php?bsn=18673&snA=172933",
+            "tag": [
+                "超坑"
+            ],
+            "recommend": [
+                {
+                    "title": "YouTube攻略影片",
+                    "url": "https://www.youtube.com/watch?v=SUlMFNNI-o4"
+                }
+            ],
+            "image": "https://truth.bahamut.com.tw/s01/201901/45c0a5697cc0d034b719570f44cf079f.JPG",
+            "download": [
+                {
+                    "mode": "install",
+                    "url": "https://marklin0531.github.io/api/minecraft-server-launcher/maps/WalkThrough-1.12.2.zip"
+                }
+            ],
+            "filesize": "3.8MB",
+            "players": "1~2人",
+            "date": "2021-04-30",
+            "server": "Vanilla",
+            "version": [
+                "1.12.2"
+            ]
+        },
+        {
+            "title": "Skyblock ultimate v1.4",
+            "description": "空島生存遊戲，多達20個島嶼...",
+            "author": "ZOMBIE1111",
+            "homepage": "https://www.minecraftmaps.com/survival-maps/skyblock-ultimate",
+            "tag": [
+                "Skyblock",
+                "20個島嶼",
+                "空島生存"
+            ],
+            "recommend": [
+                {
+                    "title": "YouTube遊戲介紹1",
+                    "url": "https://www.youtube.com/watch?v=83iVO6zidPY"
+                },
+                {
+                    "title": "YouTube遊戲介紹2",
+                    "url": "https://www.youtube.com/watch?v=uQZ8IX2eubc"
+                }
+            ],
+            "image": "https://www.minecraftmaps.com/images/jdownloads/screenshots/skyblock_ultimate_main0.png",
+            "download": [
+                {
+                    "mode": "install",
+                    "url": "https://marklin0531.github.io/api/minecraft-server-launcher/maps/skyblock_ultimate_v1.4.zip"
+                }
+            ],
+            "filesize": "24.6MB",
+            "players": "1人含以上",
+            "date": "2021-04-30",
+            "server": "Vanilla",
+            "version": [
+                "1.16.5"
+            ]
+        },
+        {
+            "title": "天空秘境III空中大陸生存",
+            "description": "",
+            "author": "Howard",
+            "homepage": "https://forum.gamer.com.tw/C.php?bsn=18673&snA=169992",
+            "tag": [
+                "天空秘境",
+                "生存"
+            ],
+            "recommend": [
+                {
+                    "title": "YouTube【季漢】MineCraft 光影天空秘境III",
+                    "url": "https://www.youtube.com/watch?v=gJH9ktXEN9g"
+                },
+                {
+                    "title": "【巧克力】『Minecraft 兄妹生存：天空秘境III』",
+                    "url": "https://www.youtube.com/watch?v=5GZqPExu2DE"
+                }
+            ],
+            "image": "https://truth.bahamut.com.tw/s01/201812/f93ca57357d453a0925a8a76ca9bf265.JPG",
+            "download": [
+                {
+                    "mode": "custom",
+                    "url": "http://www.mediafire.com/file/ta595ytgw7m3a65/-%3D+%E5%A4%A9%E7%A9%BA%E7%A7%98%E5%A2%83III%E7%A9%BA%E4%B8%AD%E5%A4%A7%E9%99%B8%E5%86%92%E9%9A%AA1.12.2+%3D-.rar"
+                }
+            ],
+            "filesize": "99.18MB",
+            "players": "1人以上",
+            "date": "2021-05-01",
+            "server": "Vanilla",
+            "version": [
+                "1.12.2"
             ]
         }
     ]

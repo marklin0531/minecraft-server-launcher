@@ -38,6 +38,7 @@
                         <input type="text" class="form-control is-invalid2" id="ops" value="" placeholder="marge,jamie">
 
                         <script id="template1" type="x-tmpl-mustache">
+                          {{#friends_empty}}<span style="color:red;">小提示: 可以使用 [好友管理] 功能先進行設定</span>{{/friends_empty}}
                           {{^friends_empty}}好友:{{/friends_empty}}
                           {{#friends}}
                           <div class="form-check form-check-inline">
@@ -267,17 +268,9 @@
 
 </body>
 </html>
-
+<script src="./initRenderer.js"></script>
 <script>
-    let consoleTitle = '[/form_server.html]';
-    const path = require('path');
-    const {remote, ipcRenderer, clipboard} = require('electron');
-    const {app, dialog} = remote;
-
-    //PS: 攔截錯誤送給 main process
-    window.onerror = function(error, url, line) {
-        ipcRenderer.send('errorInWindow', error, url, line);
-    };
+    let consoleTitle = '[/app/form_server.html]';
 
     // const keyCodes = {
     //     V: 86,
@@ -294,12 +287,6 @@
     //     }
     //     return toReturn
     // }
-
-    const Mustache = require('mustache');  //樣版引擎 https://github.com/janl/mustache.js
-    //const enums = remote.require('./common/enums');
-    const myElectron = remote.require('./common/myElectron');
-    const mydb = remote.getGlobal('MyDB');  //資料庫模組
-    const myMCServerManager = remote.require('./common/myMCServerManager');   //MC伺服器管理
 
     let form = document.getElementById('frm1');  //Form Element
 
@@ -390,18 +377,27 @@
 
         let consoleTitle2 = consoleTitle + '[getMCVersions]';
 
-        //PS: 取可安裝的 MC 版本清單
-        let MCVersions = myMCServerManager.getVersionList();
-        //console.log(consoleTitle2, 'MCVersions:', MCVersions);
+        //PS: 取 MC版本清單 - ok
+        let MCVersions = config.versions;
+        console.log(consoleTitle2, 'MCVersions:', MCVersions);
+
+        let hasJarIdx = MCVersions.findIndex(item => item.hasJar);
+        console.log(consoleTitle2, 'hasJarIdx:', hasJarIdx);
 
         //產生下拉清單
         let select = document.getElementById("version");
         MCVersions.forEach((item, idx) => {
             //console.log(consoleTitle, 'idx:', idx, ',item:', item);
             let option = document.createElement("option");
-            option.text = `${item.s}-${item.v}`;
+            option.text = `${item.s}-${item.v}`;   //${!item.hasJar ? '未安裝':''}
             option.value = item.v;
-            if (idx === 0) option.selected = 'selected';
+
+            //第1筆已安裝JAR檔的項目才被選擇
+            if (hasJarIdx) {
+                if (idx === hasJarIdx) option.selected = 'selected';
+            }
+            //if (idx === 0) option.selected = 'selected';
+            //if (!item.hasJar) option.disabled = true;  //PS: 未安裝
 
             select.appendChild(option);
         });
@@ -683,7 +679,7 @@
      * 關閉視窗 - ok
      */
     let btn_close = () => {
-        ipcRenderer.send('ipcMain_RenderList', {s: 'btn_close', data: {}});   //PS: 傳遞給 [主進程]
+        ipcRenderer.send('ipcMain_RenderList', {s: 'btn_close', data: {}});   //PS: 傳遞給 [主進程] - /app/common/ipcManOpenWindows.js
         remote.getCurrentWindow().close();  //關閉自己
     }
 

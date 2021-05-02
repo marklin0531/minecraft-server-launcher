@@ -15,98 +15,243 @@
 </head>
 <body>
 
-<div class="container-fluid">
+<!--<div class="card mt-3 mx-3 my-3 mb-3" style="max-width: 50%;"></div>-->
+
+<div class="container-fluid align-content-center">
     <script id="template1" type="x-tmpl-mustache">
-
-        <div class="container" style="height:200px;padding-left:0 !important;padding-right:0 !important;">
-           <img class="card-img" style="width:100%;" src="{{item.logo}}" alt="{{item.motd}}">
-          <h5 class="card-title" style="color:white;">{{item.motd}}</h5>
-          <p class="card-text" style="color:white;">版本: {{item.version}}</p>
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="alert alert-danger">
+            請注意:<br>
+            1.安裝的地圖版本最好與伺服器版本相近以免伺服器載入地圖時發生錯誤。<br>
+            2.如遇 [安裝] 失敗，請選擇 [自行下載] 檔案並解壓縮放入地圖目錄內。
+            </div>
         </div>
+    </div>
+{{#maps}}
+<div class="card mb-3" style2="max-width: 50%;">
+  <div class="row g-0">
+    <div class="col-md-4">
+      <img class="card-img" src="{{image}}" alt="{{title}}">
+    </div>
+    <div class="col-md-8">
+      <div class="card-body">
+        <h5 class="card-title">{{title}}</h5>
+        <p class="card-text"><small class="text-muted">{{tag}}</small></p>
+        <p class="card-text">
+           作者: {{author}} - <a href="{{homepage}}" target="_blank">[逛逛作者的網站]</a>
+        </p>
+        <p class="card-text">人數: 建議{{players}}</p>
+        <p class="card-text">
+           適用: <span class="btn btn-sm btn-outline-primary">{{server}}</span> -
+           {{#version}}
+             <span class="btn btn-sm btn-outline-danger">{{.}}</span>
+           {{/version}}
+        </p>
+        <hr>
+        <p class="card-text">{{&description}}</p>
+        {{#recommend}}
+        <p class="card-text">
+           <a href="{{url}}" target="_blank">{{title}}</a>
+        </p>
+        {{/recommend}}
+      </div>
+    </div>
+  </div>
 
-        <table class="table table-striped table-dark">
-          <thead>
-            <tr>
-              <th scope="col" style="text-align:center;">選擇</th>
-              <th scope="col">地圖目錄</th>
-              <th scope="col">執行目錄</th>
-              <th scope="col" style="text-align:right;">
-                  <button type="button" class="btn btn-sm btn-warning" onclick="btn_create_map_folder();">新增地圖目錄</button>
-                  <button type="button" class="btn btn-sm btn-dark col-3" onclick="btn_close();">關閉</button>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-          {{#worldFolders}}
-            <tr>
-              <th scope="row" style="text-align:center;">
-                  <input type="radio" class="btn btn-lg" id="{{folder}}" name="level_name" value="{{folder}}" onclick="btn_select_map_folder('{{folder}}',{{_id}})" {{#selected}}checked{{/selected}}>
-              </th>
-              <td>
-                 <label for="{{folder}}">{{folder}}</label>
-              </td>
-              <td colspan="2">
-                 {{#removeable}}
-                    <button type="button" class="btn btn-sm btn-danger col-3" id="btn_remove_map_folder_{{_id}}" onclick="btn_remove_map_folder('{{folder}}')">刪除</button>
-                 {{/removeable}}
-                 {{#clearable}}
-                    <button type="button" class="btn btn-sm btn-warning col-3" onclick="btn_clear_map_folder('{{folder}}')">清空</button>
-                 {{/clearable}}
-                 <button type="button" class="btn btn-sm btn-primary col-3" onclick="btn_open_map_folder('{{folder}}');">開啟</button>
-                 <button type="button" class="btn btn-sm btn-primary col-3" onclick="btn_open_map_folder('{{folder}}');">安裝</button>
-              </td>
-            </tr>
-          {{/worldFolders}}
-          </tbody>
-        </table>
+  <div class="row g-0">
+     <div class="col-md-12">
+          <div class="card-footer text-end" style="z-index: 1000;">
+               檔案大小: {{filesize}}
+               {{#download}}
+                   {{#isInstallMode}}
+                   <button class="btn btn-danger" type="button" onclick="btn_download({{map_id}},{{download_id}})">
+                      安裝
+                   </button>
+                   {{/isInstallMode}}
+                   {{^isInstallMode}}
+                   <button class="btn btn-danger" type="button" onclick="btn_download({{map_id}},{{download_id}})">
+                      自行下載
+                   </button>
+                   {{/isInstallMode}}
+               {{/download}}
+          </div>
+     </div>
+  </div>
+</div>
+{{/maps}}
+
     </script>
-    <div class="row" id="container1" style="margin-bottom: 0;">
+    <div class2="row" id="container1">
         <!-- template1 Render HTML Here -->
     </div>
+<!--    <button type="button" class="btn btn-sm btn-dark col-3" onclick="btn_close();">關閉</button>-->
 </div>
 
 </body>
 </html>
-
+<script src="./initRenderer.js"></script>
 <script>
-    let consoleTitle = '[/form_settinng_server_map.html]';
-    const path = require('path');
-    const {remote, ipcRenderer} = require('electron');
-    const {app, dialog} = remote;
-    const Mustache = require('mustache');  //樣版引擎 https://github.com/janl/mustache.js
-
-    //PS: 攔截錯誤送給 main process
-    window.onerror = function (error, url, line) {
-        ipcRenderer.send('errorInWindow', error, url, line);
-    };
-
-
-
-
+    let consoleTitle = '[/app/form_map_list.html]';
     //....................................................................................
     /**
      * 接收主進程(index.js)的訊息
      */
 
-    //載入伺服器資料到表單 - ok
-    //call: app/index.js => ipcMain.on('openwin_form_server')
+        //載入伺服器資料到表單 - ok
+        //call: app/index.js => ipcMain.on('openwin_form_server')
+    let params = null;   //{SERVER_DATA, SERVER_FolderPath, , map_folder}
+    let server_id = null;
     ipcRenderer.on('load', async (event, param1) => {
+        console.log(consoleTitle, '[ipcRenderer][load] param1:', param1);
+        params = param1;  //{SERVER_DATA, SERVER_FolderPath, , map_folder}
+        server_id = params.SERVER_DATA.server_id;    //伺服器ID
 
-        //console.log(consoleTitle, '[ipcRenderer][load2] param1:', param1);
-        //await load_server(param1.server_id);
-
+        await load();
     });
+
+    //PS: 載入頁面 - ok
+    let load = async () => {
+
+        let consoleTitle2 = consoleTitle + '[load]';
+        let maps = config.maps;  //PS: 可下載的地圖清單
+
+        //--------- 整理資料格式
+        maps.forEach((item, idx) => {
+            item.map_id = idx;
+            item.download.forEach((ditem, didx) => {
+                ditem.download_id = didx;
+            });
+        });
+
+        //---------
+        //PS: 輸出HTML
+        var template1 = document.getElementById('template1').innerHTML;
+        var rendered1 = Mustache.render(template1, {
+            maps: maps,
+            isInstallMode: function() {
+                return this.mode === 'install';
+            }
+        });
+        document.getElementById('container1').innerHTML = rendered1;  //Render後的html放入Container
+        //---------
+
+    }
+
+    //PS: BUTTON-下載地圖zip檔
+    let btn_download = async (mapIdx, download_id) => {
+
+        let consoleTitle2 = consoleTitle + '[btn_download]';
+        console.log(consoleTitle2, 'mapIdx:', mapIdx, ',download_id:', download_id);
+
+        let maps = config.maps;  //PS: 可下載的地圖清單
+        //console.log(consoleTitle2, 'maps:', maps);
+
+        let _selected_map = maps.find((item, idx) => idx === mapIdx);
+        //console.log(consoleTitle2, '_selected_map:', _selected_map);
+
+        if (!_selected_map) {
+            console.log(consoleTitle2, `mapIdx: ${mapIdx} - 地圖資料不存在`);
+            myElectron.showDialogMessage('錯誤', '地圖資料不存在');
+        } else {
+
+            let _title = _selected_map.title;          //地圖名稱
+            let _author = _selected_map.author;        //地圖作者
+            let _homepage = _selected_map.homepage;    //地圖網站
+            let _download = _selected_map.download[download_id];  //取得下載資訊Object
+            let _downloadUrl = _download.url;   //下載檔網址
+
+            if (_download.mode === 'install') {  //自動安裝
+
+                //PS: 目錄有地圖檔
+                let msg = `確定安裝地圖嗎?`;
+                if (params.selected_worldFolder.hasFiles) msg = `注意，此目錄內的地圖將自動被刪除，確定安裝新地圖嗎?`;
+
+                let btnClickIdx = myElectron.showConfirmDialog({
+                    type: 'warning',
+                    title: '安裝地圖',
+                    message: msg,
+                    buttons: ["確定", "取消"]
+                });
+                if (btnClickIdx === 0) {
+
+                    //PS: 下載地圖zip檔
+                    let opts = Object.assign(params, {
+                        map_info: {
+                            title: _title,
+                            author: _author,
+                            homepage: _homepage,
+                            downloadUrl: _downloadUrl
+                        }
+                    });
+                    console.log(consoleTitle2, 'opts:', opts);
+                    /*params: {
+                      SERVER_DATA: {
+                        server_id: 5,
+                        motd: 'A Minecraft Server',
+                        server: 'Vanilla',
+                        version: '1.12.2',
+                        server_port: '25565',
+                        level_name: 'world2',
+                        ops: 'jamie0324,roy0111',
+                        level_seed: '',
+                        online_mode: 'false',
+                        gamemode: '0',
+                        level_type: 'DEFAULT',
+                        max_players: 5,
+                        allow_nether: 'true',
+                        pvp: 'true',
+                        allow_flight: 'true',
+                        difficulty: '1',
+                        enable_command_block: 'true',
+                        spawn_monsters: 'true',
+                        generate_structures: 'true',
+                        gamerule_keepInventory: 'true',
+                        created_at: '2021-04-25 02:56:40',
+                        logo: '/Users/marge/data/NAS-HOME/minecraft/nodejs-dev/ServerLauncher/app/images/version/1.12.jpg'
+                      },
+                      SERVER_FolderPath: '/Users/marge/data/NAS-HOME/minecraft/nodejs-dev/ServerLauncher/server/5',
+                      selected_worldFolder: {
+                        _id: 3,
+                        folder: 'world3',
+                        hasFiles: true,
+                        clearable: true,
+                        selected: false,
+                        removeable: true
+                      },
+                      map_folder: 'world3',
+                      downloadUrl: 'https://ijaminecraft.com/download/map/oneblock/IJAMinecrafts-OneBlock-1-16-4.zip'
+                    }
+                    */
+                    let downloadAndInstallResult = ipcRenderer.sendSync('ipcMain_map_download', opts);   //PS: 傳遞給 [主進程]
+                    console.log(consoleTitle2, 'downloadAndInstallResult:', downloadAndInstallResult);
+
+                    //PS: 通知 form_setting_server_map.html 重新載入
+                    let webContentsId = browserWindows.find('form_setting_server_map').id;
+                    console.log(consoleTitle2, 'webContentsId:', webContentsId);
+                    ipcRenderer.sendTo(webContentsId, 'load', {server_id});
+
+                    //PS: 必需延遲一下才能正常關閉
+                    if (downloadAndInstallResult) {
+                        setTimeout(() => btn_close(), 500);
+                    }
+
+                }
+
+            } else {  //自行下載
+                await myElectron.shellOpenUrl(_download.url);
+            }
+
+        }
+
+    }
 
     //....................................................................................
     /**
      * 關閉視窗 - ok
      */
     let btn_close = () => {
-
-        ipcRenderer.send('ipcMain_RenderList', {s: 'btn_close', data: {}});   //PS: 傳遞給 [主進程]
-
         remote.getCurrentWindow().close();  //關閉自己
-
     }
     //....................................................................................
 </script>

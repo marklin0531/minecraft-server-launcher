@@ -70,32 +70,16 @@
 
 </body>
 </html>
-
+<script src="./initRenderer.js"></script>
 <script>
-    let consoleTitle = '[/form_server.html]';
-    const path = require('path');
-    const {remote, ipcRenderer} = require('electron');
-    const {app, dialog} = remote;
-
-    //PS: 攔截錯誤送給 main process
-    window.onerror = function (error, url, line) {
-        ipcRenderer.send('errorInWindow', error, url, line);
-    };
-
-    const locales = remote.getGlobal('locales');   //取 [支援的語系] 清單: Array
-    let i18n = remote.getGlobal('i18n');           //多國語系轉換
-
-    const Mustache = require('mustache');  //樣版引擎 https://github.com/janl/mustache.js
-    const myElectron = remote.require('./common/myElectron');
-    const mydb = remote.getGlobal('MyDB');  //資料庫模組
-
+    let consoleTitle = '[/app/form_server.html]';
     //....................................................................................
     /**
      * 接收主進程(index.js)的訊息
      */
 
     //載入伺服器資料到表單 - ok
-    //call: app/index.js => ipcMain.on('openwin_form_preference')
+    //call: app/index.js => ipcMain.on('form_form_preference')
     ipcRenderer.on('load', async (event, param1) => {
 
         //console.log(consoleTitle, '[ipcRenderer][load2] param1:', param1);
@@ -198,11 +182,7 @@
      * 關閉視窗 - ok
      */
     let btn_close = () => {
-
-        //ipcRenderer.send('ipcMain_RenderList', {s: 'btn_close', data: {}});   //PS: 傳遞給 [主進程]
-
         remote.getCurrentWindow().close();  //關閉自己
-
     }
 
     //....................................................................................
