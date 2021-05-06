@@ -1,7 +1,7 @@
 {
   "name": "minecraft-server-launcher",
   "description": "minecraft Server Launcher 麥塊伺服器-啟動器",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "license": "MIT",
   "keywords": [
     "Electron",

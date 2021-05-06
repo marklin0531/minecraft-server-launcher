@@ -131,9 +131,45 @@ class myMCServerManager {
     //region 地圖目錄
 
     /**
+     * 取安裝的地圖資訊
+     * (PS: 有使用 form_map_list.html [安裝]地圖才會有)
+     *
+     * @param word_folder_path 地圖目錄路徑
+     *
+     * 2021-05-04 友
+     *
+     * call: getWorldFolders()
+     */
+    getWorldFolderMapInfo(word_folder_path) {
+
+        let consoleTitle2 = consoleTitle + `[getWorldFolderMapInfo]`;
+
+        //PS: 讀取 map_info.json
+        let _map_info = null;  //地圖資訊 Object
+        let _map_info_path = path.join(word_folder_path, 'map_info.json');  //資訊檔路徑
+
+        if (fs.existsSync(_map_info_path)) {
+            let map_info = fs.readFileSync(_map_info_path, {encoding: "utf8"});
+            console.log(consoleTitle2, 'map_info:', map_info);
+            _map_info = map_info; //地圖資訊
+            /*{
+              "title": "麥塊空島生存",
+              "author": "IJAMinecraft",
+              "homepage": "https://ijaminecraft.com/map/oneblock/",
+              "downloadUrl": "https://marklin0531.github.io/api/minecraft-server-launcher/maps/IJAMinecrafts-OneBlock-1-16-4.zip",
+              "install_date": "2021-05-02T12:34:54.154Z"
+            }*/
+        }
+
+        return _map_info;
+
+    }
+
+    /**
      * 讀取 [伺服器目錄下的] - [地圖目錄] 清單 - ok
      *
      * call: getAvailableMapFolder()
+     * call: /app/form_setting_server_map.html
      */
     async getWorldFolders() {
 
@@ -187,7 +223,8 @@ class myMCServerManager {
             //目錄名稱包含 world 才放入清單
             if (_folder_name.includes('world')) {
 
-                const _folder_total_files = fs.readdirSync(path.join(`${serverFolderPath}`, `${_folder_name}`)).length;  //目錄下的檔案數
+                let _word_folder_path = path.join(`${serverFolderPath}`, `${_folder_name}`);
+                const _folder_total_files = fs.readdirSync(_word_folder_path).length;  //目錄下的檔案數
                 let hasFiles = _folder_total_files > 0;
                 let isWorldFolder = _folder_name === 'world';   //true=預設的world目錄
                 let isSelected = level_name === _folder_name;   //true=當前使用的地圖目錄
@@ -198,6 +235,20 @@ class myMCServerManager {
                 if (!hasFiles) isClearable = false;   //不可清空 - 空目錄
                 //if (isClearable && isSelected) isClearable = false;  //不可清空 - 當前使用的地圖目錄
 
+                //-----------
+                //PS: 2021-05-04 取 map_info.json (有使用 form_map_list.html [安裝]地圖才會有)
+                let _map_info = this.getWorldFolderMapInfo(_word_folder_path);  //取地圖資訊 String
+                if (_map_info) _map_info = JSON.parse(_map_info);  //字串轉JSON Object
+                /*{
+                  "title": "麥塊空島生存",
+                  "author": "IJAMinecraft",
+                  "homepage": "https://ijaminecraft.com/map/oneblock/",
+                  "downloadUrl": "https://marklin0531.github.io/api/minecraft-server-launcher/maps/IJAMinecrafts-OneBlock-1-16-4.zip",
+                  "install_date": "2021-05-02T12:34:54.154Z"
+                }*/
+
+                //-----------
+                //PS: 放入清單
                 _id++;
                 worldFolders.push({
                     _id: _id,
@@ -205,7 +256,8 @@ class myMCServerManager {
                     hasFiles: hasFiles,
                     clearable: isClearable,
                     selected: isSelected,
-                    removeable: isRemoveable
+                    removeable: isRemoveable,
+                    map_info: _map_info  //地圖資訊
                 });
             }
 
@@ -214,15 +266,16 @@ class myMCServerManager {
         //PS: 尚無任何 world 地圖目錄,寫入一筆 [預設的 world]
         if (worldFolders.length === 0) worldFolders.push({
             _id: _id,
-            folder: 'world',
+            folder: 'world',    //預設目錄: world
             hasFiles: false,
             clearable: false,
             selected: true,
-            removeable: false
-        });  //預設目錄
+            removeable: false,
+            map_info: null
+        });
         //console.log(consoleTitle2, 'worldFolders:', worldFolders);
 
-        return worldFolders;  //[{_id: 0, folder: 'world', hasFiles: false, clearable: false, selected: true, removeable: false}]
+        return worldFolders;  //[{_id: 0, folder: 'world', hasFiles: false, clearable: false, selected: true, removeable: false, map_info: null}]
 
     }
 
@@ -236,7 +289,7 @@ class myMCServerManager {
         let consoleTitle2 = consoleTitle + `[${this.server_id}][getAvailableMapFolder]`;
 
         let used_world_folder = [];  //['world'];
-        let _getWorldFolders = await this.getWorldFolders();  //[{folder: 'world', selected: true, removeable: false}]
+        let _getWorldFolders = await this.getWorldFolders();  //[{folder: 'world', selected: true, removeable: false, map_info: null}]
         _getWorldFolders.forEach(item => {
             used_world_folder.push(item.folder);
         });
@@ -253,7 +306,7 @@ class myMCServerManager {
                 if (sortId.length === 0) sortId = 1;
                 //console.log(consoleTitle2, 'next_folder:', next_folder, ',sortId:', sortId);
 
-                let folderIdx = parseInt(sortId) + 1;
+                let folderIdx = parseInt(sortId) + 1;  //流水號
                 //console.log(consoleTitle2, 'folderIdx:', folderIdx);
 
                 next_folder = `world${folderIdx}`;
