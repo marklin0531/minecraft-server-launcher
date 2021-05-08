@@ -11,6 +11,7 @@ const {app, BrowserWindow, ipcMain} = require('electron');
 app.commandLine.appendSwitch("disable-renderer-backgrounding");  //2021-04-13 背景中仍不降低性能 - https://pracucci.com/electron-slow-background-performances.html
 //....................................................................................
 const {
+    appTitle,
     width,
     height,
     loadOnlineConfig,
@@ -31,7 +32,6 @@ regLocale();  //(一次性) 註冊-多國語系
 
 require('./common/ipcManMCServer');    //註冊ipcMan事件
 const ipcManOpenWindows = require('./common/ipcManOpenWindows');  //註冊Renderer事件
-const enums = require('./common/enums');
 const mySecurity = require('./common/mySecurity');
 const {createBrowserWindows} = require('./common/myElectron');
 //....................................................................................
@@ -175,8 +175,8 @@ const createMain = async () => {
 
     let winName = 'index';                   //視窗名稱
     winMain = await createBrowserWindows({
-        winName: winName,                    //視窗名稱
-        winTitle: `${enums.project.title}`,  //視窗標題
+        winName: winName,                       //視窗名稱
+        winTitle: `${appTitle}`,                //視窗標題
         url: `file://${__dirname}/index.html`,  //視窗載入檔的路徑
 
         show: false,       //視窗先隱藏

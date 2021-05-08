@@ -22,6 +22,7 @@ const isOnline = require('is-online');                     //網路連線狀態:
 const fetch = require('electron-fetch').default;           //https://www.npmjs.com/package/electron-fetch
 const pkg = require('../../package.json');                 //package
 
+const appTitle = `${pkg.name.replace(/-/g,' ')} - v${pkg.version}`;  //應用程式標題
 const isDev = is.development;                              //開發與正式環境偵測
 const apiurl = pkg.apiurl;                                 //線上訊息API
 const appVersion = app.getVersion();                       //當前使用的版本
@@ -514,7 +515,7 @@ let regMenu = async () => {
 
 //匯出
 module.exports = {
-
+    appTitle,
     width,
     height,
 
