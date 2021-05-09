@@ -238,7 +238,19 @@ class myMCServerManager {
                 //-----------
                 //PS: 2021-05-04 取 map_info.json (有使用 form_map_list.html [安裝]地圖才會有)
                 let _map_info = this.getWorldFolderMapInfo(_word_folder_path);  //取地圖資訊 String
-                if (_map_info) _map_info = JSON.parse(_map_info);  //字串轉JSON Object
+                if (_map_info) {
+                    _map_info = JSON.parse(_map_info);  //字串轉JSON Object
+                } else {
+                    if (hasFiles) {
+                        _map_info = {
+                            title: "未知地圖",
+                            author: '未知',
+                            homepage: null,
+                            downloadUrl: null,
+                            install_date: null
+                        }
+                    }
+                }
                 /*{
                   "title": "麥塊空島生存",
                   "author": "IJAMinecraft",

@@ -3,13 +3,27 @@
  *
  * call: /index.js 必需優先載入
  */
-const consoleTitle = '[/app/config.js]';
+const consoleTitle = '[/app/myConfig.js]';
 const {app, BrowserWindow, Menu, ipcMain, ipcRenderer} = require('electron');
 const fs = require('fs');
 const path = require('path');
 const I18n = require('i18n-2');                            //https://www.npmjs.com/package/i18n
-const log = require('electron-log');                       //Log
+const pkg = require('../../package.json');                 //package
+require('./myLogs');    //electron-log: console.log 寫入/logs/latest.log
+console.log('>'.repeat(100));
+
+//region 共用變數
 const {is} = require('electron-util');                     //相關好用的函式庫 https://github.com/sindresorhus/electron-util
+const isDev = is.development;                              //開發與正式環境偵測
+
+const appTitle = `${pkg.name.replace(/-/g,' ')} - v${pkg.version}`;  //應用程式標題
+const apiurl = pkg.apiurl;                                 //線上訊息API
+const appVersion = app.getVersion();                       //當前使用的版本
+const appPath = app.getAppPath();                          //程式啟動目錄
+const userDataPath = app.getPath('userData');        //PS：使用個人目錄來放存
+const jarFolderPath = path.join(`${isDev ? appPath : userDataPath}`, 'server');  //MC伺服器JAR檔案存放目錄
+//endregion
+
 const {autoUpdater} = require('electron-updater');         //PS: 以Github當升級來源-範本: https://github.com/iffy/electron-updater-example
 const myAutoUpdater = require('./myAutoUpdater');          //檢測升級檔
 const myMachineResource = require('./myMachineResource');  //取主機資源
@@ -19,16 +33,8 @@ const myString = require('./myString');                    //字串函式
 const mySecurity = require('./mySecurity');                //安全函式
 const openAboutWindow = require('about-window').default;   //自訂 [關於]
 const isOnline = require('is-online');                     //網路連線狀態: https://www.npmjs.com/package/is-online
-const fetch = require('electron-fetch').default;           //https://www.npmjs.com/package/electron-fetch
-const pkg = require('../../package.json');                 //package
-
-const appTitle = `${pkg.name.replace(/-/g,' ')} - v${pkg.version}`;  //應用程式標題
-const isDev = is.development;                              //開發與正式環境偵測
-const apiurl = pkg.apiurl;                                 //線上訊息API
-const appVersion = app.getVersion();                       //當前使用的版本
-const appPath = app.getAppPath();                          //程式啟動目錄
-const userDataPath = app.getPath('userData');        //PS：使用個人目錄來放存
-const jarFolderPath = path.join(`${isDev ? appPath : userDataPath}`, 'server');  //MC伺服器JAR檔案存放目錄
+//const fetch = require('electron-fetch').default;           //https://www.npmjs.com/package/electron-fetch (棄用，改用 myDownloader.js)
+const myConfigDownloader = require('./myConfigDownloader');  //下載檔案模組
 
 
 //region 全域變數
@@ -53,32 +59,13 @@ global.machineResource = null;   //取主機資源
 
 global.serverLaunchers = null;   //PS: 記錄每台伺服器啟動器實例 (/app/common/myMCServerManager.js => serverLaunchers())
 
-//endregion
 
-
-//region Log設定
-
-//log.transports.console.level = false;  //不輸出
-// 日志大小，默认：1048576（1M），达到最大上限后，备份文件并重命名为：main.old.log，有且仅有一个备份文件
-//log.transports.file.maxSize = 1048576;
-
-// 日誌檔名，默認：main.log
-const logFileName = 'latest.log';
-log.transports.file.fileName = logFileName;  //設定Log檔名
-
-//PS: 開發環境
-let logFilePath = path.join(`${isDev ? appPath : userDataPath}`, 'logs', `${logFileName}`);  //AP目錄下的檔案路徑
-log.transports.file.resolvePath = () => logFilePath;
-const logFile = log.transports.file.getFile();  //取得Log檔寫入的路徑
-
-console.log = log.log;  //PS: 替換 console 的輸出
-console.log('>'.repeat(100));
 console.log(consoleTitle, 'global.isDev:', global.isDev);
 console.log(consoleTitle, 'global.appPath:', global.appPath);
 console.log(consoleTitle, 'global.userDataPath:', global.userDataPath);
-//console.log(consoleTitle, 'logFile:', logFile);
 
 //endregion
+
 
 //region 參數設定
 const width = 1280;   //主視窗寬
@@ -223,10 +210,12 @@ let loadOnlineConfig = async () => {
     //PS: 設定檔
     let configFile = `config.json`;   //設定檔檔名
     let configUrl = `${apiurl}/${configFile}?t=${myDate.timestamp()}`;  //下載網址
-    let configFilePath = path.join(`${isDev ? appPath : userDataPath}`, `${configFile}`);  //設定檔存放路徑
+    let configFilePath = path.join(`${isDev ? appPath : userDataPath}`, `${configFile}`);       //設定檔存放路徑
+    let configFilePath_tmp = path.join(`${isDev ? appPath : userDataPath}`, `_${configFile}`);  //設定檔存放路徑-暫存檔
     let configDefaultFilePath = path.join(`${appPath}`, `${configFile}`);  //AP目錄下的檔案路徑
     console.log(consoleTitle2, 'configUrl:', configUrl);
     console.log(consoleTitle2, 'configFilePath:', configFilePath);
+    console.log(consoleTitle2, 'configFilePath_tmp:', configFilePath_tmp);
     console.log(consoleTitle2, 'configDefaultFilePath:', configDefaultFilePath);
 
     //------------
@@ -248,42 +237,60 @@ let loadOnlineConfig = async () => {
     //isNOnline = false;  //PS: debug
     if (isNOnline) {
 
-        await (new Promise((resolve, reject) => {
-            fetch(configUrl)
-                .then(res => res.json())
-                .then(onlineConfig => {
+        let onProgress = function (received, total) {
+            //console.log(consoleTitle2, 'received:', received, ',total:', total);
+            var percentage = (received * 100) / total;
+            //console.log(consoleTitle2, percentage + "% | " + received + " bytes out of " + total + " bytes.");
+        }
+        let onFinish = function (_save_path) {
+            console.log(consoleTitle2, '[onFinish] _save_path:', _save_path);
+            //Rename tmp file
+            console.log(consoleTitle2, '[onFinish][Rename]', configFilePath_tmp, ' to ', configFilePath);
+            fs.renameSync(configFilePath_tmp, configFilePath);
+        }
+        let onError = function (e) {
+            console.error(consoleTitle2, '[onError] 下載失敗:', e);
+        }
+        let configResult = await myConfigDownloader.downloadOnlineConfig(configUrl, configFilePath_tmp, onProgress, onFinish, onError);
+        //console.log(consoleTitle2, 'configResult:', configResult);
 
-                    //console.log(consoleTitle2, onlineConfig);
-                    //PS: Save to /config.json
-                    fs.writeFile(configFilePath, JSON.stringify(onlineConfig, null, 4), function (err) {
-                        if (err) {
-                            console.error(consoleTitle2, err);
-                            return resolve(null);
-                            //throw err;
-                        }
-
-                        console.log(consoleTitle2, 'Saved! =>', configFilePath);
-
-                        let spendSecTimes = myDate.calculatorRunTimes(sdate).milliseconds;  //計算花費秒數
-                        console.log(consoleTitle2, `下載config檔花費: ${spendSecTimes} 毫秒`);
-
-                        //PS: 寫入全域變數
-                        onlineConfig.thisAppVersion = appVersion;     //當前使用的版本
-                        onlineConfig.hasNewVer = versionCompare(onlineConfig.latest, appVersion); //比對版號是否有新版本: true=有新版本
-                        onlineConfig.downloadUrl = pkg.downloadurl;   //下載的頁面
-                        global.config = onlineConfig;                 //放入全域
-                        //console.log(consoleTitle2, 'global.config:', global.config);
-
-                        return resolve(true);
-
-                    });
-
-                })
-                .catch(err => {
-                    console.error(consoleTitle2, err);
-                    return resolve(null);
-                })
-        }));
+        //PS: Deprecated 棄用
+        // await (new Promise((resolve, reject) => {
+        //     fetch(configUrl)
+        //         .then(res => res.json())
+        //         .then(onlineConfig => {
+        //
+        //             //console.log(consoleTitle2, onlineConfig);
+        //             //PS: Save to /config.json
+        //             fs.writeFile(configFilePath, JSON.stringify(onlineConfig, null, 4), function (err) {
+        //                 if (err) {
+        //                     console.error(consoleTitle2, err);
+        //                     return resolve(null);
+        //                     //throw err;
+        //                 }
+        //
+        //                 console.log(consoleTitle2, 'Saved! =>', configFilePath);
+        //
+        //                 let spendSecTimes = myDate.calculatorRunTimes(sdate).milliseconds;  //計算花費秒數
+        //                 console.log(consoleTitle2, `下載config檔花費: ${spendSecTimes} 毫秒`);
+        //
+        //                 //PS: 寫入全域變數
+        //                 onlineConfig.thisAppVersion = appVersion;     //當前使用的版本
+        //                 onlineConfig.hasNewVer = versionCompare(onlineConfig.latest, appVersion); //比對版號是否有新版本: true=有新版本
+        //                 onlineConfig.downloadUrl = pkg.downloadurl;   //下載的頁面
+        //                 global.config = onlineConfig;                 //放入全域
+        //                 //console.log(consoleTitle2, 'global.config:', global.config);
+        //
+        //                 return resolve(true);
+        //
+        //             });
+        //
+        //         })
+        //         .catch(err => {
+        //             console.error(consoleTitle2, err);
+        //             return resolve(null);
+        //         })
+        // }));
 
     } else {
         console.log(consoleTitle2, '網路未連線,無法下載 config.json =>', configUrl);

@@ -5,7 +5,7 @@
  *
  * 2021-04-19 友
  */
-const consoleTitle = '/app/common/myDownloader.js';
+const consoleTitle = '[/app/common/myDownloader.js]';
 var request = require('request');
 var fs = require('fs');
 
@@ -39,7 +39,7 @@ function downloadFile(configuration){
 
         req.on('response', function ( data ) {
 
-            console.log(consoleTitle2, 'response statusCode:', data.statusCode);
+            //console.log(consoleTitle2, 'response statusCode:', data.statusCode);
 
             if (data.statusCode !== 200) {
                 return reject('File not found!');

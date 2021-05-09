@@ -140,9 +140,7 @@
     }
     //endregion
     //....................................................................................
-    /**
-     * 接收主進程(index.js)的訊息
-     */
+    //region Load
 
     //載入資料 - ok
     //call: app/index.js, /app/common/ipcManOpenWindows.js
@@ -159,7 +157,6 @@
 
         let consoleTitle2 = consoleTitle + '[load]';
         console.log(consoleTitle2);
-
         //console.log(consoleTitle2, 'i18n目前語系:', i18n.getLocale());
 
         predictionCanStartServerTotal();  //粗估推算主機資源可啟動的伺服器數目
@@ -230,7 +227,7 @@
         //---------
 
     }
-
+    //endregion
     //....................................................................................
     //region 單一伺服器管理
 
